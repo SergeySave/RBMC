@@ -34,7 +34,7 @@ def perform_search(root_state, num_iterations, exploration, pre_node=None):
             state.applymove(move_node.move)
 
         # Expand
-        if node.untried_moves != []:
+        if node.untried_moves:
             # Pick a random move
             move = random.choice(node.untried_moves)
             # Remove the node from the list
@@ -48,10 +48,8 @@ def perform_search(root_state, num_iterations, exploration, pre_node=None):
             node = new_node
 
         # Rollout
-        all_moves = state.getallmoves()
-        while all_moves != []: # Find a terminal state
-            state.applymove(random.choice(all_moves))
-            all_moves = state.getallmoves()
+        while not state.isgameover:  # Find a terminal state
+            state.applymove(random.choice(state.getallmoves()))
 
         # Backpropagation
         board_states = [state.getboardstate(1), state.getboardstate(2)]
