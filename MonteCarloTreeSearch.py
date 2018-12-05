@@ -63,3 +63,5 @@ def perform_search(root_state, num_iterations, exploration, pre_node=None):
     best_move = max(root.children, key=lambda child: child.visits)
     return best_move.move, best_move
 
+# Q-learning
+# Q(s, a) = r(s,a) + gamma * max of a' (Q(s', a'))

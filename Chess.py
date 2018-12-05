@@ -26,8 +26,11 @@ KING = 6
 
 
 KNIGHT_MOVES = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]]
-TYPES = ['♚', '♛', '♝', '♞', '♜', '♟', '⬚', '♙', '♖', '♘', '♗', '♕', '♔']
+TYPES = ['♚', '♛', '♝', '♞', '♜', '♟', ' ', '♙', '♖', '♘', '♗', '♕', '♔']
 DIRECTIONS = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]]
+
+
+cache = {}
 
 
 # Moves are encoded the same way as they  are in the AlphaGoZero paper
@@ -46,6 +49,7 @@ class Chess:
                       0, 0, 0, 0, 0, 0, 0, 0,
                       PAWN, PAWN, PAWN, PAWN, PAWN, PAWN, PAWN, PAWN,
                       ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK]  # row = 0
+        self.basemoves = None
 
     def clone(self):
         clone = Chess()
@@ -59,22 +63,28 @@ class Chess:
 
     # Assumes that the move is legal
     def applymove(self, move):
-        plane = int(move / (8*8))
-        tile = move % (8*8)
+        desired_tile = move.toTile
+        desired_row = _getrow(desired_tile)
+        desired_col = _getcol(desired_tile)
+        if not (0 <= desired_col <= 7 and 0 <= desired_row <= 7):
+            return False
+
+        tile = move.fromTile
         row = _getrow(tile)
-        if self.currentPlayer > 0:
-            row = 7 - row
         col = _getcol(tile)
 
-        target = self.get_move_target(move)
+        if self.currentPlayer > 0:
+            row = 7 - row
+            desired_row = 7 - desired_row
+
         # If something changes with the rooks then castling becomes invalid
-        if target == _gettile(0, 0):
+        if desired_tile == _gettile(0, 0):
             self.blackCastleQS = False
-        elif target == _gettile(0, 7):
+        elif desired_tile == _gettile(0, 7):
             self.blackCastleKS = False
-        elif target == _gettile(7, 0):
+        elif desired_tile == _gettile(7, 0):
             self.whiteCastleQS = False
-        elif target == _gettile(7, 7):
+        elif desired_tile == _gettile(7, 7):
             self.whiteCastleKS = False
         if tile == _gettile(0, 0):
             self.blackCastleQS = False
@@ -89,83 +99,19 @@ class Chess:
         piece = self.state[tile]
         self.state[tile] = 0  # Remove the piece
 
-        if 0 <= plane < 56:  # queen-like movement planes
-            length = (plane % 7) + 1  # lengths 1-7
-            direction = int(plane / 7)  # directions 0-7
-            dir_coords = DIRECTIONS[direction]
-            desired_row = row + dir_coords[0] * length
-            desired_col = col + dir_coords[1] * length
-            if 0 <= desired_row <= 7 and 0 <= desired_col <= 7:  # Make sure the desired tile is on the board
-                desired_tile = _getsmarttile(desired_row, desired_col, -self.currentPlayer)
-                if abs(piece) == PAWN or abs(piece) == ROOK or \
-                        abs(piece) == BISHOP or abs(piece) == QUEEN:
-                    if abs(piece) == PAWN and desired_row == 7:
-                        self.state[desired_tile] = self.currentPlayer * -QUEEN
-                    else:
-                        self.state[desired_tile] = piece
-                if abs(piece) == KING:
-                    if self.currentPlayer == -1:  # Negated because current player was
-                        self.whiteCastleKS = False
-                        self.whiteCastleQS = False
-                    if self.currentPlayer == 1:
-                        self.blackCastleKS = False
-                        self.blackCastleQS = False
-                    if length == 1:  # Normal King move
-                        self.state[desired_tile] = piece
-                    else:  # Castling move
-                        self.state[desired_tile] = piece
-                        self.state[(tile + desired_tile)/2] = ROOK
-                        if direction == 0:
-                            self.state[_getsmarttile(0, 7, -self.currentPlayer)] = 0
-                        if direction == 4:
-                            self.state[_getsmarttile(0, 0, -self.currentPlayer)] = 0
-        elif 56 <= plane < 64:  # knight movement planes
-            direction = plane - 56
-            move = KNIGHT_MOVES[direction]
-            desired_row = row + move[0]
-            desired_col = col + move[1]
-            desired_tile = _getsmarttile(desired_row, desired_col, -self.currentPlayer)
-            self.state[desired_tile] = piece
-        else: # pawn underpromotion planes
-            if 64 <= plane < 67:  # pawn underpromotion left attack planes
-                self.state[_getsmarttile(row + 1, col - 1, -self.currentPlayer)] = \
-                    (plane - 64 + ROOK) * -self.currentPlayer  # Set it to the promoted piece
-            elif 67 <= plane < 70:  # pawn underpromotion forward planes
-                self.state[_getsmarttile(row + 1, col, -self.currentPlayer)] = \
-                    (plane - 67 + ROOK) * -self.currentPlayer  # Set it to the promoted piece
-            elif 70 <= plane < 73:  # pawn underpromotion right attack planes
-                self.state[_getsmarttile(row + 1, col + 1, -self.currentPlayer)] = \
-                    (plane - 70 + ROOK) * -self.currentPlayer  # Set it to the promoted piece
+        if abs(piece) == KING:
+            if self.currentPlayer == -1:
+                self.whiteCastleKS = False
+                self.whiteCastleQS = False
+            elif self.currentPlayer == 1:
+                self.blackCastleKS = False
+                self.blackCastleQS = False
+
+        self.state[desired_tile] = piece if move.promote == 0 else move.promote
 
     def get_move_target(self, move):
-        plane = int(move / (8*8))
-        tile = move % (8*8)
-        row = _getrow(tile)
-        if self.currentPlayer > 0:
-            row = 7 - row
-        col = _getcol(tile)
-
-        if 0 <= plane < 56:  # queen-like movement planes
-            length = (plane % 7) + 1  # lengths 1-7
-            direction = int(plane / 7)  # directions 0-7
-            dir_coords = DIRECTIONS[direction]
-            desired_row = row + dir_coords[0] * length
-            desired_col = col + dir_coords[1] * length
-            if 0 <= desired_row <= 7 and 0 <= desired_col <= 7:  # Make sure the desired tile is on the board
-                return _getsmarttile(desired_row, desired_col, self.currentPlayer)
-        elif 56 <= plane < 64:  # knight movement planes
-            direction = plane - 56
-            move = KNIGHT_MOVES[direction]
-            desired_row = row + move[0]
-            desired_col = col + move[1]
-            return _getsmarttile(desired_row, desired_col, self.currentPlayer)
-        else: # pawn underpromotion planes
-            if 64 <= plane < 67:  # pawn underpromotion left attack planes
-                return _getsmarttile(row + 1, col - 1, self.currentPlayer)
-            elif 67 <= plane < 70:  # pawn underpromotion forward planes
-                return _getsmarttile(row + 1, col, self.currentPlayer)
-            elif 70 <= plane < 73:  # pawn underpromotion right attack planes
-                return _getsmarttile(row + 1, col + 1, self.currentPlayer)
+        desired_tile = move.toTile
+        return desired_tile
 
     def is_tile_under_attack(self, tile):
         basemoves = self.getallbasemoves()
@@ -191,105 +137,226 @@ class Chess:
             return not newone.is_tile_under_attack(first_unit)
         return False
 
-    def isbaselegal(self, move, doCastlingCheck = True):
-        plane = int(move / (8*8))
-        tile = move % (8*8)
+    def isbaselegal(self, move, do_castling_check = True):
+        desired_tile = move.toTile
+        desired_row = _getrow(desired_tile)
+        desired_col = _getcol(desired_tile)
+        if not (0 <= desired_col <= 7 and 0 <= desired_row <= 7):
+            return False
+
+        tile = move.fromTile
         row = _getrow(tile)
+        col = _getcol(tile)
+
         if self.currentPlayer > 0:
             row = 7 - row
-        col = _getcol(tile)
+            desired_row = 7 - desired_row
 
         if self.state[tile] * self.currentPlayer <= 0:  # Make sure it's the current player's piece
             return False
-        if 0 <= plane < 56:  # queen-like movement planes
-            length = (plane % 7) + 1  # lengths 1-7
-            direction = int(plane / 7)  # directions 0-7
-            if self.gettype(tile) == ROOK and direction in [1, 3, 5, 7]:
-                return False  # Invalid directions for the rook
-            if self.gettype(tile) == BISHOP and direction in [0, 2, 4, 6]:
-                return False  # Invalid directions for the bishop
-            if self.gettype(tile) == KING and (not (length == 1 or (length == 2 and direction in [0, 4]))):
-                return False  # Invalid length for the king
-            if self.gettype(tile) == KNIGHT:
-                return False  # Knights cannot use the queen planes
-            if self.gettype(tile) == PAWN and (length != 1 or direction in [0, 4, 5, 6, 7]):
-                return False  # Invalid length for the path
-            dir_coords = DIRECTIONS[direction]
-            desired_row = row + dir_coords[0] * length
-            desired_col = col + dir_coords[1] * length
-            if 0 <= desired_row <= 7 and 0 <= desired_col <= 7:  # Make sure the desired tile is on the board
-                desired_tile = _getsmarttile(desired_row, desired_col, self.currentPlayer)
-                if self.gettype(tile) == PAWN:
-                    if direction == 2:
-                        return self.state[desired_tile] == 0
-                    if direction == 1 or direction == 3:
-                        return self.state[desired_tile] * self.currentPlayer < 0
-                if self.gettype(tile) == ROOK or self.gettype(tile) == BISHOP or self.gettype(tile) == QUEEN:
-                    for i in range(1, length):  # Make sure central tiles are empty
-                        curr_row = row + dir_coords[0] * i
-                        curr_col = col + dir_coords[1] * i
-                        curr_tile = _getsmarttile(curr_row, curr_col, self.currentPlayer)
-                        return self.state[curr_tile] == 0
-                    return self.state[desired_tile] * self.currentPlayer <= 0  # Make sure final tile is empty or enemy
-                if self.gettype(tile) == KING:
-                    if length == 1:  # Normal King move
-                        return self.state[desired_tile] * self.currentPlayer <= 0
-                    elif doCastlingCheck:  # Castling move
-                        # Make sure it is still legal
-                        if self.currentPlayer == 1:
-                            if direction == 0 and not self.whiteCastleKS:
-                                return False
-                            if direction == 4 and not self.whiteCastleQS:
-                                return False
-                        if self.currentPlayer == -1:
-                            if direction == 0 and not self.blackCastleKS:
-                                return False
-                            if direction == 4 and not self.blackCastleQS:
-                                return False
-                        # As the tiles are on the same row taking the average of the tile and desired tile gets the
-                        # tile in between the two
-                        return (not self.is_tile_under_attack(tile)) and (not self.is_tile_under_attack((tile + desired_tile) / 2)) and \
-                               self.state[desired_tile] == 0 and self.state[(tile + desired_tile)/2] == 0
 
+        piece_type = self.gettype(tile)
+        if piece_type == PAWN:
+            if self.state[desired_tile] == 0:
+                if desired_col == col:
+                    if row == 1 and (desired_row == 2 or desired_row == 3):
+                        return True
+                    if (desired_row - row) == 1:
+                        return True
+                return False
+            elif abs(desired_col - col) == 1 and desired_row - row == 1:
+                return True
             return False
-        elif 56 <= plane < 64:  # knight movement planes
-            if self.gettype(tile) != KNIGHT:  # Only knights can use the knight planes
+        elif piece_type == ROOK:
+            if row == desired_row:  # Vertical movement
+                direction = 1 if desired_col > col else -1
+                for i in range(1, abs(desired_col-col)):
+                    mid_tile = _getsmarttile(row, col + i * direction, self.currentPlayer)
+                    if self.state[mid_tile] != 0:
+                        return False
+                return self.state[_getsmarttile(row, desired_col, self.currentPlayer)] * self.currentPlayer <= 0
+            elif col == desired_col:  # Horizontal movement
+                direction = 1 if desired_row > row else -1
+                for i in range(1, abs(desired_row-row)):
+                    mid_tile = _getsmarttile(row + i * direction, col, self.currentPlayer)
+                    if self.state[mid_tile] != 0:
+                        return False
+                return self.state[_getsmarttile(desired_row, col, self.currentPlayer)] * self.currentPlayer <= 0
+            return False
+        elif piece_type == KNIGHT:
+            dr = desired_row - row
+            dc = desired_col - col
+            return (dr * dr + dc * dc) == 5 and \
+                self.state[_getsmarttile(desired_row, desired_col, self.currentPlayer)] * self.currentPlayer <= 0
+        elif piece_type == BISHOP:
+            dr = desired_row - row
+            dc = desired_col - col
+            if dr == dc:  # Positive slope movement
+                direction = 1 if dr > 0 else -1
+                for i in range(1, abs(dr)):
+                    mid_tile = _getsmarttile(row + i * direction, col + i * direction, self.currentPlayer)
+                    if self.state[mid_tile] != 0:
+                        return False
+                return self.state[_getsmarttile(desired_row, desired_col, self.currentPlayer)] * self.currentPlayer <= 0
+            elif dr == -dc:  # Negative slope movement
+                direction = 1 if dr > 0 else -1
+                for i in range(1, abs(dr)):
+                    mid_tile = _getsmarttile(row + i * direction, col - i * direction, self.currentPlayer)
+                    if self.state[mid_tile] != 0:
+                        return False
+                return self.state[_getsmarttile(desired_row, desired_col, self.currentPlayer)] * self.currentPlayer <= 0
+            return False
+        elif piece_type == QUEEN:
+            if row == desired_row:  # Vertical movement
+                direction = 1 if desired_col > col else -1
+                for i in range(1, abs(desired_col-col)):
+                    mid_tile = _getsmarttile(row, col + i * direction, self.currentPlayer)
+                    if self.state[mid_tile] != 0:
+                        return False
+                return self.state[_getsmarttile(row, desired_col, self.currentPlayer)] * self.currentPlayer <= 0
+            elif col == desired_col:  # Horizontal movement
+                direction = 1 if desired_row > row else -1
+                for i in range(1, abs(desired_row-row)):
+                    mid_tile = _getsmarttile(row + i * direction, col, self.currentPlayer)
+                    if self.state[mid_tile] != 0:
+                        return False
+                return self.state[_getsmarttile(desired_row, col, self.currentPlayer)] * self.currentPlayer <= 0
+            dr = desired_row - row
+            dc = desired_col - col
+            if dr == dc:  # Positive slope movement
+                direction = 1 if dr > 0 else -1
+                for i in range(1, abs(dr)):
+                    mid_tile = _getsmarttile(row + i * direction, col + i * direction, self.currentPlayer)
+                    if self.state[mid_tile] != 0:
+                        return False
+                return self.state[_getsmarttile(desired_row, desired_col, self.currentPlayer)] * self.currentPlayer <= 0
+            elif dr == -dc:  # Negative slope movement
+                direction = 1 if dr > 0 else -1
+                for i in range(1, abs(dr)):
+                    mid_tile = _getsmarttile(row + i * direction, col - i * direction, self.currentPlayer)
+                    if self.state[mid_tile] != 0:
+                        return False
+                return self.state[_getsmarttile(desired_row, desired_col, self.currentPlayer)] * self.currentPlayer <= 0
+            return False
+        elif piece_type == KING:
+            dr = desired_row - row
+            dc = desired_col - col
+            if (dr * dr + dc * dc) <= 2:
+                return self.state[_getsmarttile(desired_row, desired_col, self.currentPlayer)] * self.currentPlayer <= 0
+            if not do_castling_check:
                 return False
-            direction = plane - 56
-            move = KNIGHT_MOVES[direction]
-            desired_row = row + move[0]
-            desired_col = col + move[1]
-            if 0 <= desired_row <= 7 and 0 <= desired_col <= 7:  # Make sure the desired tile is on the board
-                desired_tile = _getsmarttile(desired_row, desired_col, self.currentPlayer)
-                return self.state[desired_tile] * self.currentPlayer <= 0  # make sure it's not your player's piece
-            else:
-                return False
-        else: # pawn underpromotion planes
-            if self.gettype(tile) != PAWN or row != 6:  # Only pawns at row 6 can use the underpromotion planes
-                return False
-            if 64 <= plane < 67:  # pawn underpromotion left attack planes
-                # make sure that the tile is on the board and has an opponent piece 
-                return col > 0 and \
-                       self.state[_getsmarttile(row + 1, col - 1, self.currentPlayer)] * self.currentPlayer < 0
-            elif 67 <= plane < 70:  # pawn underpromotion forward planes
-                # make sure the tile is empty
-                return self.state[_getsmarttile(row + 1, col, self.currentPlayer)] * self.currentPlayer == 0
-            elif 70 <= plane < 73:  # pawn underpromotion right attack planes
-                # make sure that the tile is on the board and has an opponent piece
-                return col < 7 and \
-                       self.state[_getsmarttile(row + 1, col + 1, self.currentPlayer)] * self.currentPlayer < 0
+            if self.currentPlayer == 1:
+                if dc > 0 and not self.whiteCastleKS:
+                    return False
+                if dc < 0 and not self.whiteCastleQS:
+                    return False
+            if self.currentPlayer == -1:
+                if dc > 0 and not self.blackCastleKS:
+                    return False
+                if dc < 0 and not self.blackCastleQS:
+                    return False
+            # As the tiles are on the same row taking the average of the tile and desired tile gets the
+            # tile in between the two
+            return (not self.is_tile_under_attack(tile)) and (not self.is_tile_under_attack((tile + desired_tile) / 2))\
+                and self.state[desired_tile] == 0 and self.state[(tile + desired_tile) / 2] == 0
 
     def getallmoves(self):
         # If the game is over then there are no more moves
         if self.getboardstate(1) != 0.5:
             return []
-        return [i for i in range(8*8*73) if self.islegal(i)]
+        moves = []
+        for i in range(64):
+            moves.extend([move for move in self.possible_moves(i) if self.islegal(move)])
+        return moves
 
     def getallbasemoves(self):
         # If the game is over then there are no more moves
+        if self.basemoves is not None:
+            return self.basemoves
         if self.getboardstate(1) != 0.5:
-            return []
-        return [i for i in range(8*8*73) if self.isbaselegal(i, False)]
+            self.basemoves = []
+            return self.basemoves
+        moves = []
+        for i in range(64):
+            moves.extend([move for move in self.possible_moves(i) if self.isbaselegal(move, False)])
+        self.basemoves = moves
+        return self.basemoves
+
+    def possible_moves(self, tile):
+        row = _getrow(tile)
+        col = _getcol(tile)
+        if self.currentPlayer > 0:
+            row = 7 - row
+        piece_type = self.gettype(tile)
+
+        if tile in cache:
+            if piece_type in cache[tile]:
+                if self.currentPlayer in cache[tile][piece_type]:
+                    return cache[tile][piece_type][self.currentPlayer]
+
+        moves = []
+        if piece_type == PAWN:
+            if row < 6:
+                moves.append(ChessMove(tile, _getsmarttile(row + 1, col, self.currentPlayer)))
+                moves.append(ChessMove(tile, _getsmarttile(row + 1, col - 1, self.currentPlayer)))
+                moves.append(ChessMove(tile, _getsmarttile(row + 1, col + 1, self.currentPlayer)))
+                moves.append(ChessMove(tile, _getsmarttile(row + 2, col, self.currentPlayer)))
+            else:
+                for i in range(2, 6):
+                    moves.append(ChessMove(tile, _getsmarttile(row + 1, col, self.currentPlayer), i))
+                    moves.append(ChessMove(tile, _getsmarttile(row + 1, col - 1, self.currentPlayer), i))
+                    moves.append(ChessMove(tile, _getsmarttile(row + 1, col + 1, self.currentPlayer), i))
+        elif piece_type == ROOK:
+            for i in range(8):
+                if i != row:
+                    moves.append(ChessMove(tile, _getsmarttile(i, col, self.currentPlayer)))
+                if i != col:
+                    moves.append(ChessMove(tile, _getsmarttile(row, i, self.currentPlayer)))
+        elif piece_type == KNIGHT:
+            moves.append(ChessMove(tile, _getsmarttile(row + 1, col + 2, self.currentPlayer)))
+            moves.append(ChessMove(tile, _getsmarttile(row + 1, col - 2, self.currentPlayer)))
+            moves.append(ChessMove(tile, _getsmarttile(row - 1, col + 2, self.currentPlayer)))
+            moves.append(ChessMove(tile, _getsmarttile(row - 1, col - 2, self.currentPlayer)))
+            moves.append(ChessMove(tile, _getsmarttile(row + 2, col + 1, self.currentPlayer)))
+            moves.append(ChessMove(tile, _getsmarttile(row + 2, col - 1, self.currentPlayer)))
+            moves.append(ChessMove(tile, _getsmarttile(row - 2, col + 1, self.currentPlayer)))
+            moves.append(ChessMove(tile, _getsmarttile(row - 2, col - 1, self.currentPlayer)))
+        elif piece_type == BISHOP:
+            for i in range(8):
+                row1 = row - col + i
+                row2 = row + col - i
+                col_spot = col + i
+                if col != col_spot:
+                    if 0 <= row1 <= 7:
+                        moves.append(ChessMove(tile, _getsmarttile(row1, col_spot, self.currentPlayer)))
+                    if 0 <= row2 <= 7:
+                        moves.append(ChessMove(tile, _getsmarttile(row2, col_spot, self.currentPlayer)))
+        elif piece_type == QUEEN:
+            for i in range(8):
+                if i != row:
+                    moves.append(ChessMove(tile, _getsmarttile(i, col, self.currentPlayer)))
+                if i != col:
+                    moves.append(ChessMove(tile, _getsmarttile(row, i, self.currentPlayer)))
+                row1 = row - col + i
+                row2 = row + col - i
+                col_spot = col + i
+                if col != col_spot:
+                    if 0 <= row1 <= 7:
+                        moves.append(ChessMove(tile, _getsmarttile(row1, col_spot, self.currentPlayer)))
+                    if 0 <= row2 <= 7:
+                        moves.append(ChessMove(tile, _getsmarttile(row2, col_spot, self.currentPlayer)))
+        elif piece_type == KING:
+            for i in range(-1, 2):
+                for j in range(-1, 2):
+                    if i != 0 or j != 0:
+                        moves.append(ChessMove(tile, _getsmarttile(row + i, col + j, self.currentPlayer)))
+        if tile not in cache:
+            cache[tile] = {}
+        if piece_type not in cache[tile]:
+            cache[tile][piece_type] = {}
+        if self.currentPlayer not in cache[tile][piece_type]:
+            cache[tile][piece_type][self.currentPlayer] = moves
+        return moves
 
     def getboardstate(self, player):
         curr_king = self.findfirstunit(KING * player)
@@ -319,6 +386,7 @@ class Chess:
 
 
 class ChessMove:
-    def __init__(self, fromTile, toTile):
+    def __init__(self, fromTile, toTile, promote = 0):
         self.fromTile = fromTile
         self.toTile = toTile
+        self.promote = promote
