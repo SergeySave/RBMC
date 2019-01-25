@@ -17,6 +17,17 @@ class Chess:
         clone.currentPlayer = self.currentPlayer
         return clone
 
+    def mirror(self):
+        mirror = Chess()
+        mirror.board = self.board.mirror()
+        mirror.currentPlayer = 3 - self.currentPlayer
+        return mirror
+
+    def __eq__(self, other):
+        if other is not Chess:
+            return False
+        return self.board == other.board
+
     # Assumes that the move is legal
     def applymove(self, move):
         self.board.push(move)
