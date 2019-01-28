@@ -29,43 +29,45 @@ def residual_block(previous):
 
 
 class Network:
-    def __init__(self):
+    def __init__(self, model=None):
         self.input = Input(shape=(N, N, M*T + L))
+        if model is None:
+            # A convolution of 256 filters of kernel size 3 × 3 with stride 1
+            conv = Conv2D(256, kernel_size=3, strides=1, activation='relu', kernel_regularizer=l2(REG_PARAM), padding="same", input_shape=(N, N, M*T + L))(self.input)
+            norm = BatchNormalization()(conv)  # Batch normalisation
+            rnln = ReLU()(norm)  # A rectifier non-linearity
 
-        # A convolution of 256 filters of kernel size 3 × 3 with stride 1
-        conv = Conv2D(256, kernel_size=3, strides=1, activation='relu', kernel_regularizer=l2(REG_PARAM), padding="same", input_shape=(N, N, M*T + L))(self.input)
-        norm = BatchNormalization()(conv)  # Batch normalisation
-        rnln = ReLU()(norm)  # A rectifier non-linearity
+            tower = rnln
+            for i in range(RESIDUAL_BLOCKS):
+                tower = residual_block(tower)
 
-        tower = rnln
-        for i in range(RESIDUAL_BLOCKS):
-            tower = residual_block(tower)
+            # A convolution of 2 filters of kernel size 1 × 1 with stride 1
+            policy_conv = Conv2D(2, kernel_size=1, strides=1, activation='relu', kernel_regularizer=l2(REG_PARAM), padding="same")(tower)
+            policy_norm = BatchNormalization()(policy_conv)  # Batch normalisation
+            policy_rnln = ReLU()(policy_norm)  # A rectifier non-linearity
+            # Make sure the output size is correct
+            policy_flat = Flatten()(policy_rnln)
+            # A fully connected linear layer that outputs a vector of size 192 + 1 = 362 corresponding to logit
+            # probabilities for all intersections and the pass move
+            policy_dout = Dense(73 * 8 * 8, kernel_regularizer=l2(REG_PARAM))(policy_flat)
 
-        # A convolution of 2 filters of kernel size 1 × 1 with stride 1
-        policy_conv = Conv2D(2, kernel_size=1, strides=1, activation='relu', kernel_regularizer=l2(REG_PARAM), padding="same")(tower)
-        policy_norm = BatchNormalization()(policy_conv)  # Batch normalisation
-        policy_rnln = ReLU()(policy_norm)  # A rectifier non-linearity
-        # Make sure the output size is correct
-        policy_flat = Flatten()(policy_rnln)
-        # A fully connected linear layer that outputs a vector of size 192 + 1 = 362 corresponding to logit
-        # probabilities for all intersections and the pass move
-        policy_dout = Dense(73 * 8 * 8, kernel_regularizer=l2(REG_PARAM))(policy_flat)
+            # A convolution of 1 filter of kernel size 1 × 1 with stride 1
+            value_conv = Conv2D(1, kernel_size=1, strides=1, activation='relu', kernel_regularizer=l2(REG_PARAM), padding="same")(tower)
+            value_norm = BatchNormalization()(value_conv)  # Batch normalisation
+            value_rnln1 = ReLU()(value_norm)  # A rectifier non-linearity
+            # Make sure the output size is correct
+            value_flat = Flatten()(value_rnln1)
+            # A fully connected linear layer to a hidden layer of size 256
+            value_dense = Dense(256, kernel_regularizer=l2(REG_PARAM))(value_flat)
+            value_rnln2 = ReLU()(value_dense)  # A rectifier non-linearity
+            # A fully connected linear layer to a scalar
+            value_scalar = Dense(1, kernel_regularizer=l2(REG_PARAM))(value_rnln2)
+            # A tanh non-linearity outputting a scalar in the range [−1, 1]
+            value_out = Activation(activation='tanh')(value_scalar)
 
-        # A convolution of 1 filter of kernel size 1 × 1 with stride 1
-        value_conv = Conv2D(1, kernel_size=1, strides=1, activation='relu', kernel_regularizer=l2(REG_PARAM), padding="same")(tower)
-        value_norm = BatchNormalization()(value_conv)  # Batch normalisation
-        value_rnln1 = ReLU()(value_norm)  # A rectifier non-linearity
-        # Make sure the output size is correct
-        value_flat = Flatten()(value_rnln1)
-        # A fully connected linear layer to a hidden layer of size 256
-        value_dense = Dense(256, kernel_regularizer=l2(REG_PARAM))(value_flat)
-        value_rnln2 = ReLU()(value_dense)  # A rectifier non-linearity
-        # A fully connected linear layer to a scalar
-        value_scalar = Dense(1, kernel_regularizer=l2(REG_PARAM))(value_rnln2)
-        # A tanh non-linearity outputting a scalar in the range [−1, 1]
-        value_out = Activation(activation='tanh')(value_scalar)
-
-        self.model = Model(inputs=self.input, outputs=[policy_dout, value_out])
+            self.model = Model(inputs=self.input, outputs=[policy_dout, value_out])
+        else:
+            self.model = model
 
     def compile(self):
         self.model.compile(optimizer='rmsprop', loss=['categorical_crossentropy', 'mean_squared_error'], metrics=['accuracy'])
@@ -109,7 +111,7 @@ class Network:
 
 
 def load_network(file_name):
-    return load_model(file_name)
+    return Network(load_model(file_name))
 
 
 def get_piece_planes(board):
