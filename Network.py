@@ -4,6 +4,7 @@ from keras.models import Model
 import numpy as np
 from ChessUtils import *
 import chess
+from keras.models import load_model
 
 N = 8
 T = 8
@@ -102,6 +103,13 @@ class Network:
         input_planes[:, :, -2] = np.repeat(int(bool(castling & chess.BB_H8)), N*N).reshape((N, N))  # Opponent 8 castling
         input_planes[:, :, -1] = np.repeat(current_board.halfmove_clock, N*N).reshape((N, N))  # No progress count
         return self.model.predict(np.array([input_planes]), batch_size=1)
+
+    def save(self, file_name):
+        self.model.save(file_name)
+
+
+def load_network(file_name):
+    return load_model(file_name)
 
 
 def get_piece_planes(board):
