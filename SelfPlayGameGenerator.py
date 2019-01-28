@@ -13,7 +13,7 @@ exporter = chess.pgn.StringExporter(headers=False, comments=False, variations=Fa
 
 for i in range(4096):
     print("Starting self-play iteration " + str(i))
-    states, moves, result = generate_game(white_network, black_network, 1000, 1, printing=True)
+    states, moves, result = generate_game(white_network, black_network, 1000, 1, printing=False)
     with open("output/" + str(i) + ".json", 'w') as file:
         json.dump({"game": chess.pgn.Game.from_board(states[-1].board).accept(exporter),
                    "move_probs": [{move.uci(): prob for (move, prob) in probs.items()} for probs in moves],
