@@ -78,6 +78,9 @@ def expand_and_eval(node, states, network):
     node.children = [Node(smart_apply_move(base_state, move, node.player), move,
                           get_prob_for_move(move, probs[0]), node) for move in moves]
     # At this point the probabilities aren't probabilities but they are just values
+    denominator = sum([math.exp(child.prior) for child in node.children])
+    for child in node.children:
+        child.prior = math.exp(child.prior)/denominator
 
 
 def perform_search(game_states, num_iterations, temperature, network):
