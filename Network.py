@@ -49,7 +49,7 @@ class Network:
             policy_flat = Flatten()(policy_rnln)
             # A fully connected linear layer that outputs a vector of size 192 + 1 = 362 corresponding to logit
             # probabilities for all intersections and the pass move
-            policy_dout = Dense(73 * 8 * 8, kernel_regularizer=l2(REG_PARAM))(policy_flat)
+            policy_dout = Dense(73 * N * N, kernel_regularizer=l2(REG_PARAM))(policy_flat)
 
             # A convolution of 1 filter of kernel size 1 × 1 with stride 1
             value_conv = Conv2D(1, kernel_size=1, strides=1, activation='relu', kernel_regularizer=l2(REG_PARAM), padding="same")(tower)
@@ -73,38 +73,7 @@ class Network:
         self.model.compile(optimizer='rmsprop', loss=['categorical_crossentropy', 'mean_squared_error'], metrics=['accuracy'])
 
     def evaluate(self, states):
-        input_planes = np.empty((N, N, M*T + L))
-
-        current_board = states[-1].board
-        if states[-1].currentPlayer == 2:
-            current_board = current_board.mirror()
-
-        # no_progress = get_current_repetition_count(current_board)
-        castling = current_board.castling_rights
-
-        # fill current_board input planes
-        for i in range(T):
-            if len(states) > i:
-                # This plane exists we must fill it
-                # Get the piece planes
-                input_planes[:, :, (-L - M*(i + 1)):(-L - M*i)] = get_piece_planes(states[-i].board)
-
-                # No repetition planes: not really sure how to create them
-                # Get the repetition
-                # input_planes[(-L - M * i - 2):(-L - M * i)] = get_piece_planes(states[-i])
-            else:
-                # Before the game started: empty planes
-                input_planes[:, :, (-L - M*(i + 1)):(-L - M*i)] = 0
-
-        # Player 1 = 0, Player 2 = 1
-        input_planes[:, :, -7] = np.repeat(states[-1].currentPlayer - 1, N*N).reshape((N, N))  # Player color
-        input_planes[:, :, -6] = np.repeat(states[-1].board.fullmove_number, N*N).reshape((N, N))  # Total move count
-        input_planes[:, :, -5] = np.repeat(int(bool(castling & chess.BB_A1)), N*N).reshape((N, N))  # Player 1 castling
-        input_planes[:, :, -4] = np.repeat(int(bool(castling & chess.BB_A8)), N*N).reshape((N, N))  # Player 8 castling
-        input_planes[:, :, -3] = np.repeat(int(bool(castling & chess.BB_H1)), N*N).reshape((N, N))  # Opponent 1 castling
-        input_planes[:, :, -2] = np.repeat(int(bool(castling & chess.BB_H8)), N*N).reshape((N, N))  # Opponent 8 castling
-        input_planes[:, :, -1] = np.repeat(current_board.halfmove_clock, N*N).reshape((N, N))  # No progress count
-        return self.model.predict(np.array([input_planes]), batch_size=1)
+        return self.model.predict(np.array([convert_states(states)]), batch_size=1)
 
     def save(self, file_name):
         self.model.save(file_name)
@@ -112,6 +81,90 @@ class Network:
 
 def load_network(file_name):
     return Network(load_model(file_name))
+
+
+def convert_states(states):
+    input_planes = np.empty((N, N, M*T + L))
+
+    current_board = states[-1].board
+    if states[-1].currentPlayer == 2:
+        current_board = current_board.mirror()
+
+    # no_progress = get_current_repetition_count(current_board)
+    castling = current_board.castling_rights
+
+    # fill current_board input planes
+    for i in range(T):
+        if len(states) > i:
+            # This plane exists we must fill it
+            # Get the piece planes
+            input_planes[:, :, (-L - M*(i + 1)):(-L - M*i)] = get_piece_planes(states[-i].board)
+
+            # No repetition planes: not really sure how to create them
+            # Get the repetition
+            # input_planes[(-L - M * i - 2):(-L - M * i)] = get_piece_planes(states[-i])
+        else:
+            # Before the game started: empty planes
+            input_planes[:, :, (-L - M*(i + 1)):(-L - M*i)] = 0
+
+    # Player 1 = 0, Player 2 = 1
+    input_planes[:, :, -7] = np.repeat(states[-1].currentPlayer - 1, N*N).reshape((N, N))  # Player color
+    input_planes[:, :, -6] = np.repeat(states[-1].board.fullmove_number, N*N).reshape((N, N))  # Total move count
+    input_planes[:, :, -5] = np.repeat(int(bool(castling & chess.BB_A1)), N*N).reshape((N, N))  # Player 1 castling
+    input_planes[:, :, -4] = np.repeat(int(bool(castling & chess.BB_A8)), N*N).reshape((N, N))  # Player 8 castling
+    input_planes[:, :, -3] = np.repeat(int(bool(castling & chess.BB_H1)), N*N).reshape((N, N))  # Opponent 1 castling
+    input_planes[:, :, -2] = np.repeat(int(bool(castling & chess.BB_H8)), N*N).reshape((N, N))  # Opponent 8 castling
+    input_planes[:, :, -1] = np.repeat(current_board.halfmove_clock, N*N).reshape((N, N))  # No progress count
+    return input_planes
+
+
+def convert_move_probs(move_probs, do_mirror_move):
+    network_values = np.zeros((73*N*N))
+    if do_mirror_move:
+        for move, prob in move_probs.items():
+            network_values[get_move_index(mirror_move(move))] = prob
+    else:
+        for move, prob in move_probs.items():
+            network_values[get_move_index(move)] = prob
+    return network_values
+
+
+def get_move_index(move):
+    in_plane_index = move.from_square
+    origin_file = chess.square_file(in_plane_index)
+    origin_rank = chess.square_rank(in_plane_index)
+    dest_file = chess.square_file(move.to_square)
+    dest_rank = chess.square_rank(move.to_square)
+    plane = -1 # should error if this stays -1
+    if move.promotion is not None and move.promotion != chess.QUEEN:
+        # Underpromotion planes
+        promotions = [chess.ROOK, chess.KNIGHT, chess.BISHOP]
+        promotion = 0
+        for i in range(len(promotions)):
+            if move.promotion == promotions[i]:
+                promotion = i
+        direction = dest_file - origin_file + 1  # left = 0, center = 1, right = 2
+        plane = promotion * 3 + direction + 64  # 64 = Offset for being an underpromotion move
+    elif (origin_file - dest_file)**2 + (origin_rank - dest_rank)**2 == 5:
+        # Knight moves
+        directions = [(2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2), (1, 2)]
+        direction = 0
+        for i in range(len(directions)):
+            # If this is the correct direction
+            if dest_file == origin_file + directions[i][1] and dest_rank == origin_rank + directions[i][0]:
+                direction = i
+        plane = direction + 56  # 56 = Offset for being a knight move
+    else:
+        # Queen moves
+        directions = [(0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)]
+        magnitude = max(abs(origin_file - dest_file), abs(origin_rank - dest_rank))
+        direction = 0
+        for i in range(len(directions)):
+            # If this is the correct direction
+            if dest_file == origin_file + magnitude * directions[i][1] and dest_rank == origin_rank + magnitude * directions[i][0]:
+                direction = i
+        plane = direction * 7 + magnitude
+    return 8*8*plane + in_plane_index
 
 
 def get_piece_planes(board):
@@ -124,6 +177,10 @@ def get_piece_planes(board):
             if piece.isalpha():
                 result[rank][file][fen_order.find(piece)] = 1
     return result
+
+
+def mirror_move(move):
+    return chess.Move(chess.square_mirror(move.from_square), chess.square_mirror(move.to_square), promotion=move.promotion, drop=move.drop)
 
 
 def fix_fen(fen):

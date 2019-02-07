@@ -1,6 +1,7 @@
 import math
 import random
 import chess
+from Network import get_move_index, mirror_move
 
 
 class Node:
@@ -21,41 +22,7 @@ class Node:
 
 
 def get_prob_for_move(move, probs):
-    in_plane_index = move.from_square
-    origin_file = chess.square_file(in_plane_index)
-    origin_rank = chess.square_rank(in_plane_index)
-    dest_file = chess.square_file(move.to_square)
-    dest_rank = chess.square_rank(move.to_square)
-    plane = -1 # should error if this stays -1
-    if move.promotion is not None and move.promotion != chess.QUEEN:
-        # Underpromotion planes
-        promotions = [chess.ROOK, chess.KNIGHT, chess.BISHOP]
-        promotion = 0
-        for i in range(len(promotions)):
-            if move.promotion == promotions[i]:
-                promotion = i
-        direction = dest_file - origin_file + 1  # left = 0, center = 1, right = 2
-        plane = promotion * 3 + direction + 64  # 64 = Offset for being an underpromotion move
-    elif (origin_file - dest_file)**2 + (origin_rank - dest_rank)**2 == 5:
-        # Knight moves
-        directions = [(2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2), (1, 2)]
-        direction = 0
-        for i in range(len(directions)):
-            # If this is the correct direction
-            if dest_file == origin_file + directions[i][1] and dest_rank == origin_rank + directions[i][0]:
-                direction = i
-        plane = direction + 56  # 56 = Offset for being a knight move
-    else:
-        # Queen moves
-        directions = [(0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)]
-        magnitude = max(abs(origin_file - dest_file), abs(origin_rank - dest_rank))
-        direction = 0
-        for i in range(len(directions)):
-            # If this is the correct direction
-            if dest_file == origin_file + magnitude * directions[i][1] and dest_rank == origin_rank + magnitude * directions[i][0]:
-                direction = i
-        plane = direction * 7 + magnitude
-    return probs[8*8*plane + in_plane_index]
+    return probs[get_move_index(move)]
 
 
 def smart_apply_move(state, move, player):
@@ -76,11 +43,12 @@ def expand_and_eval(node, states, network):
         base_state = base_state.clone()
     moves = base_state.getallmoves()
     node.children = [Node(smart_apply_move(base_state, move, node.player), move,
-                          get_prob_for_move(move, probs[0]), node) for move in moves]
+                          get_prob_for_move(move, probs[0])/10, node) for move in moves]
     # At this point the probabilities aren't probabilities but they are just values
-    denominator = sum([math.exp(child.prior) for child in node.children])
-    for child in node.children:
-        child.prior = math.exp(child.prior)/denominator
+    if len(node.children) > 0:
+        denominator = sum([math.exp(child.prior) for child in node.children])
+        for child in node.children:
+            child.prior = math.exp(child.prior)/denominator
 
 
 def perform_search(game_states, num_iterations, temperature, network):
@@ -124,10 +92,6 @@ def perform_search(game_states, num_iterations, temperature, network):
     if root.player == 2:
         return {mirror_move(move): prob / prob_sum for (move, prob) in probs.items()}
     return {move: prob/prob_sum for (move, prob) in probs.items()}
-
-
-def mirror_move(move):
-    return chess.Move(chess.square_mirror(move.from_square), chess.square_mirror(move.to_square), promotion=move.promotion, drop=move.drop)
 
 
 def pick_action(move_probs):
