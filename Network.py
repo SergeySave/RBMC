@@ -1,6 +1,7 @@
 from keras.layers import Input, Conv2D, BatchNormalization, ReLU, add, Dense, Activation, Flatten
 from keras.regularizers import l2
 from keras.models import Model
+from keras.optimizers import SGD
 import numpy as np
 from ChessUtils import *
 import chess
@@ -70,7 +71,8 @@ class Network:
             self.model = model
 
     def compile(self):
-        self.model.compile(optimizer='rmsprop', loss=['categorical_crossentropy', 'mean_squared_error'], metrics=['accuracy'])
+        opt = SGD()
+        self.model.compile(optimizer=opt, loss=['categorical_crossentropy', 'mean_squared_error'], metrics=['accuracy'])
 
     def evaluate(self, states):
         return self.model.predict(np.array([convert_states(states)]), batch_size=1)
