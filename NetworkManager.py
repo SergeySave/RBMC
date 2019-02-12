@@ -5,7 +5,7 @@ from Network import load_network
 class NetworkManager:
 
     def __init__(self, verbose=False):
-        self.current_num_networks = 0
+        self.current_num_networks = 1
         self.verbose = verbose
 
     def update_state(self):

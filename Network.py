@@ -93,7 +93,7 @@ def convert_states(states):
         if len(states) > i:
             # This plane exists we must fill it
             # Get the piece planes
-            input_planes[:, :, (-L - M*(i + 1)):(-L - M*i)] = get_piece_planes(states[-i].board)
+            input_planes[:, :, (-L - M*(i + 1)):(-L - M*i)] = get_piece_planes(states[-i].board, states[-1].currentPlayer == 2)
 
             # No repetition planes: not really sure how to create them
             # Get the repetition
@@ -162,15 +162,22 @@ def get_move_index(move):
     return 8*8*plane + in_plane_index
 
 
-def get_piece_planes(board):
+def get_piece_planes(board, mirror):
     fen_order = "KQRBNPkqrbnp"  # Possible optimization: Make this a dictionary
     state = fix_fen(board.fen())
     result = np.zeros((N, N, 12))
-    for rank in range(N):
-        for file in range(N):
-            piece = state[rank * N + file]
-            if piece.isalpha():
-                result[rank][file][fen_order.find(piece)] = 1
+    if mirror:
+        for rank in range(N):
+            for file in range(N):
+                piece = state[rank * N + file]
+                if piece.isalpha():
+                    result[7 - rank][file][fen_order.find(piece)] = 1
+    else:
+        for rank in range(N):
+            for file in range(N):
+                piece = state[rank * N + file]
+                if piece.isalpha():
+                    result[rank][file][fen_order.find(piece)] = 1
     return result
 
 

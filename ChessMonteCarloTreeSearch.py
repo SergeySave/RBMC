@@ -16,8 +16,15 @@ class Node:
 
         self.parent = parent
         self.children = []
-        self.player = state.currentPlayer
+        if self.parent is not None:
+            self.player = 3 - parent.player
+        else:
+            self.player = state.currentPlayer
         self.value = 0.0  # NN evaluation of the current.txt state V(state)
+
+    def mirror(self):
+        self.action = mirror_move(self.action)
+        return self
 
 
 def get_prob_for_move(move, probs):
@@ -25,23 +32,24 @@ def get_prob_for_move(move, probs):
 
 
 def smart_apply_move(state, move, player):
-    state.applymove(move)
+    s = state.mirror()
+    s.applymove(mirror_move(move))
     if player == 2:
-        return state.mirror()
+        return s
     else:
-        return state
+        return s
 
 
 def expand_and_eval(node, states, network):
     probs, value = network.evaluate(states)
     node.value = value[0][0]
     base_state = node.state
-    if node.player == 2:  # If it is black's turn flip the board
-        base_state = base_state.mirror()
-    else:
-        base_state = base_state.clone()
+    # if node.player == 2:  # If it is black's turn flip the board
+    # base_state = base_state.mirror()
+    # else:
+    #     base_state = base_state
     moves = base_state.getallmoves()
-    node.children = [Node(smart_apply_move(base_state, move, node.player), move,
+    node.children = [Node(smart_apply_move(base_state, move, node.player), move if node.player == 1 else mirror_move(move),
                           get_prob_for_move(move, probs[0]), node) for move in moves]
     # At this point the probabilities aren't probabilities but they are just values
     if len(node.children) > 0:
@@ -50,9 +58,13 @@ def expand_and_eval(node, states, network):
             child.prior = math.exp(child.prior)/denominator
 
 
-def perform_search(game_states, num_iterations, temperature, exploration, network):
+def perform_search(game_states, num_iterations, temperature, exploration, network, base_root=None):
     # root node (no action taken to get there, 100% prior probability, no parent)
-    root = Node(game_states[-1], None, 1.0, None)
+    if base_root is None:
+        root = Node(game_states[-1], None, 1.0, None)
+    else:
+        root = base_root
+        root.parent = None
 
     for i in range(num_iterations):
         node = root
@@ -87,10 +99,8 @@ def perform_search(game_states, num_iterations, temperature, exploration, networ
     for child in root.children:
         p = child.visits ** power
         prob_sum += p
-        probs[child.action] = p
-    if root.player == 2:
-        return {mirror_move(move): prob / prob_sum for (move, prob) in probs.items()}
-    return {move: prob/prob_sum for (move, prob) in probs.items()}
+        probs[child] = p
+    return {(node.action, node): prob/prob_sum for (node, prob) in probs.items()}
 
 
 def pick_action(move_probs):
