@@ -1,19 +1,12 @@
-from keras.layers import Input, Conv2D, BatchNormalization, ReLU, add, Dense, Activation, Flatten
-from keras.regularizers import l2
-from keras.models import Model
-from keras.optimizers import SGD
-import numpy as np
-from ChessUtils import *
 import chess
+import numpy as np
+from keras.layers import Input, Conv2D, BatchNormalization, ReLU, add, Dense, Activation, Flatten
+from keras.models import Model
 from keras.models import load_model
+from keras.optimizers import SGD
+from keras.regularizers import l2
 
-N = 8
-T = 8
-M = 12
-L = 7
-RESIDUAL_BLOCKS = 19
-
-REG_PARAM = 0.01
+from Constants import *
 
 
 def residual_block(previous):
@@ -50,7 +43,7 @@ class Network:
             policy_flat = Flatten()(policy_rnln)
             # A fully connected linear layer that outputs a vector of size 192 + 1 = 362 corresponding to logit
             # probabilities for all intersections and the pass move
-            policy_dout = Dense(73 * N * N, kernel_regularizer=l2(REG_PARAM))(policy_flat)
+            policy_dout = Activation(activation='tanh')(Dense(73 * N * N, kernel_regularizer=l2(REG_PARAM))(policy_flat))
 
             # A convolution of 1 filter of kernel size 1 × 1 with stride 1
             value_conv = Conv2D(1, kernel_size=1, strides=1, activation='relu', kernel_regularizer=l2(REG_PARAM), padding="same")(tower)
@@ -71,7 +64,7 @@ class Network:
             self.model = model
 
     def compile(self):
-        opt = SGD()
+        opt = SGD(lr=LEARNING_RATE, momentum=MOMENTUM)
         self.model.compile(optimizer=opt, loss=['categorical_crossentropy', 'mean_squared_error'], metrics=['accuracy'])
 
     def evaluate(self, states):

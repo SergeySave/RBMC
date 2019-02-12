@@ -1,6 +1,5 @@
 import math
 import random
-import chess
 from Network import get_move_index, mirror_move
 
 
@@ -18,7 +17,7 @@ class Node:
         self.parent = parent
         self.children = []
         self.player = state.currentPlayer
-        self.value = 0.0  # NN evaluation of the current state V(state)
+        self.value = 0.0  # NN evaluation of the current.txt state V(state)
 
 
 def get_prob_for_move(move, probs):
@@ -43,7 +42,7 @@ def expand_and_eval(node, states, network):
         base_state = base_state.clone()
     moves = base_state.getallmoves()
     node.children = [Node(smart_apply_move(base_state, move, node.player), move,
-                          get_prob_for_move(move, probs[0])/10, node) for move in moves]
+                          get_prob_for_move(move, probs[0]), node) for move in moves]
     # At this point the probabilities aren't probabilities but they are just values
     if len(node.children) > 0:
         denominator = sum([math.exp(child.prior) for child in node.children])
@@ -51,7 +50,7 @@ def expand_and_eval(node, states, network):
             child.prior = math.exp(child.prior)/denominator
 
 
-def perform_search(game_states, num_iterations, temperature, network):
+def perform_search(game_states, num_iterations, temperature, exploration, network):
     # root node (no action taken to get there, 100% prior probability, no parent)
     root = Node(game_states[-1], None, 1.0, None)
 
@@ -64,8 +63,8 @@ def perform_search(game_states, num_iterations, temperature, network):
         # Find a leaf node acording to the upper confidence bound
         while node.children:
             # Find the node that has the maximum upper confidence bound Q(s,a) + U(s,a) where
-            # U(s,a) proportional to P(s,a)/(1+N(s,a))
-            move_node = max(node.children, key=lambda child: child.avalue + child.prior/(1+child.visits))
+            # U(s,a) = c * P(s,a) * (sum over all b N(s,b))/(1+N(s,a))
+            move_node = max(node.children, key=lambda child: child.avalue + exploration * child.prior * math.sqrt(node.visits - 1)/(1+child.visits))
             # Descend down the tree
             node = move_node
             # state.applymove(move_node.move)
@@ -101,4 +100,4 @@ def pick_action(move_probs):
         total += prob
         if rand <= total:
             return move
-    return None # This shouldn't ever happen unless something goes terribly wrong
+    return None  # This shouldn't ever happen unless something goes terribly wrong

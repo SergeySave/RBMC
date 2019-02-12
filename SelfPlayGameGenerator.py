@@ -1,26 +1,19 @@
-import json
-
-import chess.pgn
-
-from Network import load_network
+from GameManager import GameManager
+from NetworkManager import NetworkManager
 from Trainer import *
-import os.path
+from Constants import *
 
 
-def generate_self_play_games(white_network, black_network, num_games, num_iterations, temperature):
-    exporter = chess.pgn.StringExporter(headers=False, comments=False, variations=False)
-
+def generate_self_play_games(network, num_games, num_iterations, temperature, exploration, game_mangr, verbose=False):
     for i in range(num_games):
-        if os.path.exists("output/" + str(i) + ".json"):
-            print("Skipping iteration " + str(i) + " output file already exists")
-        else:
-            print("Starting self-play iteration " + str(i))
-            states, moves, result = generate_game(white_network, black_network, num_iterations, temperature, printing=False)
-            with open("output/" + str(i) + ".json", 'w') as file:
-                json.dump({"game": chess.pgn.Game.from_board(states[-1].board).accept(exporter),
-                           "move_probs": [{move.uci(): prob for (move, prob) in probs.items()} for probs in moves],
-                           "result": result}, file, indent=4)
+        states, moves, result = generate_game(network, network, num_iterations, temperature, exploration,
+                                              printing=verbose)
+        game_mangr.save_next_game(states, moves, result)
 
 
 if __name__ == "__main__":
-    generate_self_play_games(load_network("output/network1.h5"), load_network("output/network2.h5"), 4096, 100, 1)
+    network_manager = NetworkManager(True)
+    game_manager = GameManager(GAME_KEEP_NUM, True)
+    while True:
+        generate_self_play_games(network_manager.load_recent_network(), GAMES_PER_ITER, EVAL_PER_MOVE, TEMPERATURE,
+                                 EXPLORATION, game_manager, True)

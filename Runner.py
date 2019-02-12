@@ -18,7 +18,7 @@ white_network.compile()
 # black_network.compile()
 black_network = white_network  # They are both the same network
 
-states, moves, result = generate_game(white_network, black_network, 10, 1, printing=False)
+states, moves, result = generate_game(white_network, black_network, 10, 1, 1, printing=False)
 
 print(states)
 print(moves)
