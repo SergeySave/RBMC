@@ -7,7 +7,7 @@ EXPLORATION = 1.4142135624
 
 # Training/Optimization Variables
 SAMPLE_SIZE = int(2048)  # Mini-batch size from AGZ paper
-BATCH_SIZE = 2  # batch-size per worker from AGZ paper
+BATCH_SIZE = 32  # batch-size per worker from AGZ paper
 MOMENTUM = 0.9
 STEPS_PER_ITER = 1000
 LEARNING_RATE = 10E-4  # TODO: Replace with smart thing
