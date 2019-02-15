@@ -16,7 +16,7 @@ def train_network_from_games(training_network, game_mangr, num_steps, verbose=Fa
 if __name__ == "__main__":
     network_manager = NetworkManager(True)
     game_manager = GameManager(GAME_KEEP_NUM, True)
+    network = network_manager.load_recent_network()
     while True:
-        network = network_manager.load_recent_network()
         train_network_from_games(network, game_manager, True)
         network_manager.save_recent_network(network)
