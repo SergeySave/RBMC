@@ -50,11 +50,7 @@
 from Chess import Chess
 import random
 from collections import Counter
-import chess
-
-
-def consistent_with_all(state, move, info_list):
-    return all(info.consistent_with(state, move) for info in info_list)
+from Information import *
 
 
 def generate_next_states(game, counter, info_list):
@@ -67,10 +63,14 @@ def generate_next_states(game, counter, info_list):
     return {new_game: c for new_game, c, move in ngen if consistent_with_all(new_game, move, info_list)}
 
 
+# TODO: Implement some way to account for the opponent failing to move/skipping a turn
 def generate_possible_states(n, information, max_attempts=5):
     states = Counter({Chess(): n})
     for info in information:
-        if type(info) is chess.Move:
+        if info is None:
+            # No move was made (using None to represent a missed/skipped move)
+            new_states = states
+        elif type(info) is chess.Move:
 
             # Try applying the move
             new_states = Counter({g.clone().applymove(info): c for g, c in states.items() if
@@ -88,32 +88,6 @@ def generate_possible_states(n, information, max_attempts=5):
         misses = n - sum(new_states.values())
         states = Counter(random.choices(list(new_states.keys()), k=misses)) + new_states
     return states
-
-
-class Information:
-    def consistent_with(self, state, action):
-        pass
-
-
-class NothingInSix(Information):
-    def consistent_with(self, s, action):
-        return s.gettype(chess.A6) + s.gettype(chess.B6) + s.gettype(chess.C6) + s.gettype(chess.D6) + \
-               s.gettype(chess.E6) + s.gettype(chess.F6) + s.gettype(chess.G6) + s.gettype(chess.H6) == 0
-
-
-class MovedKnight(Information):
-    def consistent_with(self, s, action):
-        return s.gettype(action.to_square) == chess.KNIGHT
-
-
-class BlackMissingPawn(Information):
-    def consistent_with(self, state, action):
-        return state.board.fen().count('p') < 8  # Using fen bad for efficiency
-
-
-class WhiteMissingKnight(Information):
-    def consistent_with(self, state, action):
-        return state.board.fen().count('N') < 2  # Using fen bad for efficiency
 
 
 if __name__ == "__main__":

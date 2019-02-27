@@ -24,7 +24,7 @@ class Chess:
         return mirror
 
     def __eq__(self, other):
-        if other is not Chess:
+        if type(other) is not Chess:
             return False
         return self.board == other.board
 
@@ -33,6 +33,12 @@ class Chess:
         self.board.push(move)
         self.currentPlayer = 3 - self.currentPlayer
         return self
+
+    def try_apply_move(self, move):
+        if move in self.board.legal_moves:
+            self.applymove(move)
+            return True
+        return False
 
     def getallmoves(self):
         return [move for move in self.board.legal_moves]
