@@ -16,7 +16,7 @@ class NetworkManager:
     def save_recent_network(self, network):
         self.update_state()  # Ensure we know how many networks there are
         print("Saving network " + str(self.current_num_networks))
-        network.save("output/network/network" + str(self.current_num_networks) + ".h5")
+        network.save("output/network/network_weights" + str(self.current_num_networks) + ".h5")
         self.current_num_networks += 1
         with open("output/network/current.txt", 'w') as file:
             file.writelines([str(self.current_num_networks)])
@@ -24,4 +24,4 @@ class NetworkManager:
     def load_recent_network(self):
         self.update_state()
         print("Loading network " + str(self.current_num_networks - 1))
-        return load_network("output/network/network" + str(self.current_num_networks - 1) + ".h5")
+        return load_network("output/network/network_weights" + str(self.current_num_networks - 1) + ".h5")

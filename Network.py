@@ -71,11 +71,14 @@ class Network:
         return self.model.predict(np.array([convert_states(states)]), batch_size=1)
 
     def save(self, file_name):
-        self.model.save(file_name)
+        self.model.save_weights(file_name)
 
 
 def load_network(file_name):
-    return Network(load_model(file_name))
+    result = Network()
+    result.model.load_weights(file_name)
+    result.compile()
+    return result  # Network(load_model(file_name))
 
 
 def convert_states(states):
