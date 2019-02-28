@@ -24,7 +24,7 @@ class Chess:
         return mirror
 
     def __eq__(self, other):
-        if other is not Chess:
+        if type(other) is not Chess:
             return False
         return self.board == other.board
 
@@ -32,6 +32,13 @@ class Chess:
     def applymove(self, move):
         self.board.push(move)
         self.currentPlayer = 3 - self.currentPlayer
+        return self
+
+    def try_apply_move(self, move):
+        if move in self.board.legal_moves:
+            self.applymove(move)
+            return True
+        return False
 
     def getallmoves(self):
         return [move for move in self.board.legal_moves]
@@ -48,7 +55,8 @@ class Chess:
         return self.board.result() != "*"
 
     def gettype(self, tile):
-        return abs(self.state[tile])
+        piece = self.board.piece_at(tile)
+        return piece.piece_type if piece is not None else 0
 
     def getchar(self, tile):
         piece = self.board.piece_at(tile)
@@ -64,9 +72,13 @@ class Chess:
             result += "\n"
         return result
 
+    def __hash__(self):
+        # noinspection PyProtectedMember
+        return hash(self.board._transposition_key())
+
 
 class ChessMove:
-    def __init__(self, fromTile, toTile, promote = 0):
-        self.fromTile = fromTile
-        self.toTile = toTile
+    def __init__(self, from_tile, to_tile, promote = 0):
+        self.from_tile = from_tile
+        self.to_tile = to_tile
         self.promote = promote
