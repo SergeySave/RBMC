@@ -19,6 +19,22 @@ class ViewportInformation(Information):
     def consistent_with(self, state, action):
         return all(state.board.piece_at(tile) == contents for tile, contents in self.info.items())
 
+    def __repr__(self):
+        from Chess import TYPES
+        result = ""
+        for i in range(8):
+            for j in range(8):
+                if chess.square(j, 7-i) not in self.info:
+                    result += "·"
+                else:
+                    piece = self.info[chess.square(j, 7-i)] if chess.square(j, 7-i) in self.info else None
+                    if piece is None:
+                        result += TYPES[6]
+                    else:
+                        result += TYPES[piece.piece_type * (1 if piece.color == chess.WHITE else -1) + 6]
+            result += "\n"
+        return result
+
 
 # Says that the player moved some piece to a given tile
 class SomethingMovedTo(Information):
@@ -38,6 +54,16 @@ class IllegalMove(Information):
 
     def consistent_with(self, state, action):
         return self.move not in state.board.legal_moves
+
+
+# Says that the given move is legal to make after this player has gone
+class LegalMove(Information):
+
+    def __init__(self, move):
+        self.move = move
+
+    def consistent_with(self, state, action):
+        return self.move in state.board.legal_moves
 
 
 class NothingInSix(Information):

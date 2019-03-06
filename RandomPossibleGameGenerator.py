@@ -65,6 +65,8 @@ def generate_next_states(game, counter, info_list):
 
 # TODO: Implement some way to account for the opponent failing to move/skipping a turn
 def generate_possible_states(n, information, max_attempts=5):
+    if n == 0:
+        return Counter()
     states = Counter({Chess(): n})
     for info in information:
         if info is None:

@@ -34,6 +34,12 @@ class Chess:
         self.currentPlayer = 3 - self.currentPlayer
         return self
 
+    # Assumes that the move is legal
+    def apply_move_did_capture(self, move):
+        capture = self.board.piece_at(move.to_square) is not None
+        self.applymove(move)
+        return capture
+
     def try_apply_move(self, move):
         if move in self.board.legal_moves:
             self.applymove(move)
