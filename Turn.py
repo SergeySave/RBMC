@@ -13,24 +13,102 @@
 from RandomPossibleGameGenerator import generate_possible_states, generate_next_states
 from collections import Counter
 from Information import *
+import math
+import random
+
+
+# last element in previous_beliefs is the belief we started with before our scan
+# last element in info_list is the opponent's move and viewport scan
+# element before that is our previous move
+def generate_states_from_priors_pre_move(previous_beliefs, info_list, fraction, n_total, max_attempts=1):
+    if n_total <= 1:
+        return Counter()
+    if len(previous_beliefs) == 0:
+        return Counter({Chess(): n_total})
+    n_now = math.ceil(n_total * fraction)
+    belief = previous_beliefs[-1]
+    opponent_info = info_list[-1]
+    if len(belief) == 0:
+        n_now = 0
+    priors = generate_states_from_priors(previous_beliefs[:-1], info_list[:-1], fraction, n_total - n_now, max_attempts)
+    priors += belief  # Counter(random.choices(list(belief.keys()), k=n_total-sum(priors.values())))
+    # Propogate according to opponent_info
+    nows = Counter()
+    attempts = 0
+    while attempts < max_attempts and sum(nows.values()) < n_total:
+        nows += sum((Counter(d) for d in (generate_next_states(state, amount, opponent_info) for state, amount in priors.items())), Counter())
+        attempts += 1
+    if len(nows) == 0:
+        return Counter()
+    nows = Counter(random.choices(list(nows.keys()), weights=list(nows.values()), k=n_total))
+    return nows
+
+
+# last element in previous_beliefs is the belief we started with before our scan
+# last element in info_list is the opponent's move and viewport scan
+# element before that is our previous move
+def generate_states_from_priors(previous_beliefs, info_list, fraction, n_total, max_attempts=1):
+    if n_total <= 1:
+        return Counter()
+    if len(previous_beliefs) == 0:
+        return Counter({Chess(): n_total})
+    my_move = info_list[-1]
+    nows = generate_states_from_priors_pre_move(previous_beliefs, info_list[:-1], fraction, n_total, max_attempts=max_attempts)
+    nows = Counter({g.applymove(my_move): c for g, c in nows.items()})
+    return nows
+
+
+def material_heuristic(state):
+    white_points = len(state.board.pieces(chess.PAWN, chess.WHITE)) + \
+                   3 * len(state.board.pieces(chess.KNIGHT, chess.WHITE)) + \
+                   3 * len(state.board.pieces(chess.BISHOP, chess.WHITE)) + \
+                   6 * len(state.board.pieces(chess.ROOK, chess.WHITE)) + \
+                   9 * len(state.board.pieces(chess.QUEEN, chess.WHITE))
+    black_points = len(state.board.pieces(chess.PAWN, chess.BLACK)) + \
+                   3 * len(state.board.pieces(chess.KNIGHT, chess.BLACK)) + \
+                   3 * len(state.board.pieces(chess.BISHOP, chess.BLACK)) + \
+                   6 * len(state.board.pieces(chess.ROOK, chess.BLACK)) + \
+                   9 * len(state.board.pieces(chess.QUEEN, chess.BLACK))
+    return white_points / (white_points + black_points)
+
+
+def get_probability_distribution(state, heuristic, temperature=1.0):
+    power = 1.0 / temperature
+    result = {}
+    for m in state.board.legal_moves:
+        state.board.push(m)
+        result[m] = heuristic(state) ** power
+        state.board.pop()
+    return result
+
+
+def generate_next_states_probs(game, counter, info_list):
+    # pick legal moves from the probability distribution
+    # apply them
+    # ngen is the next game generator
+    prob_distr = get_probability_distribution(game, material_heuristic, 0.5)
+    ngen = ((game.clone().applymove(move), c, move) for move, c in
+            Counter(random.choices(list(prob_distr.keys()), weights=list(prob_distr.values()), k=counter)).items())
+    # for each of those next games make sure it is consistent with the information we have available for this move
+    return {new_game: c for new_game, c, move in ngen if consistent_with_all(new_game, move, info_list)}
 
 
 # region_selector is a function from a list of previous possible board configurations to a ViewportInformation
 # move_selector is a function from a list of possible board configurations to a move
-def do_turn(previous, info_list, region_selector, move_selector, game, desired_size, max_attempts=1):
+def do_turn(previous_beliefs, info_list, region_selector, move_selector, game, desired_size, gen_fraction, max_attempts=1):
     opponent_move = info_list[-1]
+    previous = previous_beliefs[-1]
 
     # Propagate moves 1 step forward
-    now_states = sum((Counter(d) for d in (generate_next_states(state, amount, opponent_move) for state, amount in
+    now_states = sum((Counter(d) for d in (generate_next_states_probs(state, amount, opponent_move) for state, amount in
                                            previous.items())), Counter())
 
-    # Repopulate
-    now_states += generate_possible_states(desired_size - sum(now_states.values()), info_list,
-                                           max_attempts=max_attempts)
+    now_states += generate_states_from_priors_pre_move(previous_beliefs, info_list, gen_fraction, desired_size - sum(now_states.values()),
+                                                       max_attempts=max_attempts)
 
     # Select a region
     scan_viewport_info = region_selector(now_states, game)
-    print(scan_viewport_info)
+    # print(scan_viewport_info)
     # Add the information to our information list
     opponent_move.append(scan_viewport_info)
 
@@ -39,8 +117,10 @@ def do_turn(previous, info_list, region_selector, move_selector, game, desired_s
                           scan_viewport_info.consistent_with(state, None)})
 
     # Repopulate with legal states
-    now_states += generate_possible_states(desired_size - sum(now_states.values()), info_list,
-                                           max_attempts=max_attempts)
+    # now_states += generate_possible_states(desired_size - sum(now_states.values()), info_list,
+    #                                        max_attempts=max_attempts)
+    now_states += generate_states_from_priors_pre_move(previous_beliefs, info_list, gen_fraction, desired_size - sum(now_states.values()),
+                                                       max_attempts=max_attempts)
 
     # Pick a move
     move = move_selector(now_states)
@@ -62,8 +142,10 @@ def do_turn(previous, info_list, region_selector, move_selector, game, desired_s
 
         next_states = Counter({g: c for g, c in now_states.items() if (move not in g.board.legal_moves)})
 
-    next_states += generate_possible_states(desired_size - sum(next_states.values()), info_list,
-                                            max_attempts=max_attempts)
+    # next_states += generate_possible_states(desired_size - sum(next_states.values()), info_list,
+    #                                         max_attempts=max_attempts)
+    next_states += generate_states_from_priors(previous_beliefs, info_list, gen_fraction, desired_size - sum(next_states.values()),
+                                               max_attempts=max_attempts)
 
     return next_states
 
@@ -72,9 +154,12 @@ if __name__ == "__main__":
     from Chess import Chess
     from ScanningChooser import heuristic_scan3x3
     true_state = Chess()
-    belief_size = 10000
-    retries = 5
+    belief_size = 2500
+    retries = 10
+    now_fraction = 3/5
+    all_belief_states = []
     belief = generate_possible_states(belief_size, [], max_attempts=1)
+    all_belief_states.append(belief)
     info = []
 
     is_ai_move = False
@@ -88,10 +173,11 @@ if __name__ == "__main__":
                  "Kc8", "Ra8+"]:
         if is_ai_move:
             print(true_state.tostring())
-            belief = do_turn(belief, info, heuristic_scan3x3,
+            belief = do_turn(all_belief_states, info, heuristic_scan3x3,
                              lambda x: true_state.board.parse_san(move),
-                             true_state, belief_size, max_attempts=retries)
-            print(len(belief), true_state in belief.keys())
+                             true_state, belief_size, now_fraction, max_attempts=retries)
+            all_belief_states.append(belief)
+            print(len(belief), true_state in belief.keys(), max(belief.values()) == belief[true_state])
             print()
             print()
         else:
