@@ -15,6 +15,7 @@ from collections import Counter
 from Information import *
 import math
 import random
+from Chess import Chess
 
 
 # last element in previous_beliefs is the belief we started with before our scan
@@ -54,7 +55,8 @@ def generate_states_from_priors(previous_beliefs, info_list, fraction, n_total, 
         return Counter({Chess(): n_total})
     my_move = info_list[-1]
     nows = generate_states_from_priors_pre_move(previous_beliefs, info_list[:-1], fraction, n_total, max_attempts=max_attempts)
-    nows = Counter({g.applymove(my_move): c for g, c in nows.items()})
+    if my_move is not None:
+        nows = Counter({g.applymove(my_move): c for g, c in nows.items()})
     return nows
 
 
