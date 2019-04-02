@@ -43,7 +43,16 @@ class SomethingMovedTo(Information):
         self.moved_to = tile
 
     def consistent_with(self, state, action):
-        return action.to_square == self.moved_to
+        return action is not None and action.to_square == self.moved_to
+
+
+class PiecePresentAt(Information):
+
+    def __init__(self, tile):
+        self.location = tile
+
+    def consistent_with(self, state, action):
+        return state.board.piece_at(self.location) is not None
 
 
 # Says that the given move is illegal to make after this player has gone
@@ -63,7 +72,7 @@ class LegalMove(Information):
         self.move = move
 
     def consistent_with(self, state, action):
-        return self.move in state.board.legal_moves
+        return (self.move is None) or (self.move in state.board.legal_moves)
 
 
 class NothingInSix(Information):

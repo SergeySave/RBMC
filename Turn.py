@@ -24,7 +24,7 @@ from Chess import Chess
 def generate_states_from_priors_pre_move(previous_beliefs, info_list, fraction, n_total, max_attempts=1):
     if n_total <= 1:
         return Counter()
-    if len(previous_beliefs) == 0:
+    if len(previous_beliefs) == 0 or len(info_list) == 0:
         return Counter({Chess(): n_total})
     n_now = math.ceil(n_total * fraction)
     belief = previous_beliefs[-1]
@@ -51,7 +51,7 @@ def generate_states_from_priors_pre_move(previous_beliefs, info_list, fraction, 
 def generate_states_from_priors(previous_beliefs, info_list, fraction, n_total, max_attempts=1):
     if n_total <= 1:
         return Counter()
-    if len(previous_beliefs) == 0:
+    if len(previous_beliefs) == 0 or len(info_list) == 0:
         return Counter({Chess(): n_total})
     my_move = info_list[-1]
     nows = generate_states_from_priors_pre_move(previous_beliefs, info_list[:-1], fraction, n_total, max_attempts=max_attempts)

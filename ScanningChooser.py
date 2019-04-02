@@ -45,7 +45,9 @@ def get_piece_code(piece):
     return piece.piece_type * (1 if piece.color == chess.WHITE else -1) + 6
 
 
-def heuristic_scan3x3(now_states, game):
+def heuristic_scan3x3_loc(now_states):
+    if len(now_states) == 0:
+        return random.randrange(6), random.randrange(6)
     viewports = {}
     for board, count in now_states.items():
         result = {}
@@ -61,21 +63,11 @@ def heuristic_scan3x3(now_states, game):
                 if viewport_location not in viewports.keys():
                     viewports[viewport_location] = Counter()
                 viewports[viewport_location][encoding] += count
+    return most_configuration_heuristic(viewports)
 
-        # Reduced python generator comprehension code
-        # adj_generator = ((file, rank, get_piece_code(board.board.piece_at(chess.square(file, rank))),
-        #                  (0, 0, 0) if file == 0 else result[(file - 1, rank)],
-        #                  (0 if rank == 0 else result[(file, rank - 1)][2])) for file, rank in
-        #                  itertools.product(range(8), range(8)))
-        # for file, rank, this, up, left in adj_generator:
-        #     result[(file, rank)] = (up[1], up[2], this | ((left << 4) & 4095))
-        # for file, rank in itertools.product(range(2, 8), range(2, 8)):
-        #     viewport_location = (file - 2, rank - 2)
-        #     if viewport_location not in viewports.keys():
-        #         viewports[viewport_location] = Counter()
-        #     viewports[viewport_location][result[(file, rank)]] += count
 
-    location = most_configuration_heuristic(viewports)
+def heuristic_scan3x3(now_states, game):
+    location = heuristic_scan3x3_loc(now_states)
 
     # start_file and start_rank must be in the range [0, 5] because the scan is 3x3
     return perform_scan(location[0], location[1], 3, 3, game)
