@@ -50,7 +50,7 @@ def expand_and_eval(node, states, network):
     #     base_state = base_state
     moves = base_state.getallmoves()
     node.children = [Node(smart_apply_move(base_state, move, node.player), move if node.player == 1 else mirror_move(move),
-                          get_prob_for_move(move, probs[0]), node) for move in moves]
+                          get_prob_for_move(move, probs[0]), node) for move in moves if move is not None]
     # At this point the probabilities aren't probabilities but they are just values
     if len(node.children) > 0:
         denominator = sum([math.exp(child.prior) for child in node.children])
