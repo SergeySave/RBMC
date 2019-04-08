@@ -1,3 +1,11 @@
+
+from keras import backend as K
+if 'tensorflow' == K.backend():
+    import tensorflow as tf
+    from keras.backend.tensorflow_backend import set_session
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    set_session(tf.Session(config=config))
 import chess
 import numpy as np
 from keras.layers import Input, Conv2D, BatchNormalization, ReLU, add, Dense, Activation, Flatten
