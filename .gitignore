@@ -3,4 +3,4 @@ __pycache__/*
 venv/*
 GameHistory/
 env/
-
+input/
