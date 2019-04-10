@@ -20,13 +20,18 @@ class NetworkAgent(Agent):
     def choose_move(self, states):
         from ChessMonteCarloTreeSearch import  perform_search, pick_action
         from Constants import EXPLORATION
+        from Network import mirror_move
         probs = perform_search(states, self.iterations, 0.01, EXPLORATION, self.network)
         move, _ = pick_action(probs)
-        return move
+        if (states[-1].currentPlayer == 1):
+            return move
+        else:
+            return mirror_move(move)
 
 
 def evaluate(white_agent, black_agent):
     from Chess import Chess
+
     game = Chess()
 
     game_states = []
@@ -35,8 +40,8 @@ def evaluate(white_agent, black_agent):
         game_states.append(game.clone())
         agent = white_agent if (game.currentPlayer == 1) else black_agent
         move = agent.choose_move(game_states)
-        game.try_apply_move(move)
-        break
+        game.applymove(move)
+        print(game.tostring())
 
     return game.getboardstate(1)
 
