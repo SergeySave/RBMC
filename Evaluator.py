@@ -41,8 +41,11 @@ def evaluate(white_agent, black_agent):
         agent = white_agent if (game.currentPlayer == 1) else black_agent
         move = agent.choose_move(game_states)
         game.applymove(move)
-        print(game.tostring())
+        # print(game.tostring())
 
+    print("----------")
+    print(game.tostring())
+    # print(game.getboardstate(1))
     return game.getboardstate(1)
 
 
@@ -52,7 +55,7 @@ if __name__ == "__main__":
 
     EVALUATIONS = 100
     COMPARISON_AGENT = RandomAgent()
-    NETWORK_NUMS = [5521, 6500, 7500, 8500, 9500, 10500, 11500]
+    NETWORK_NUMS = [5521] # , 6500, 7500, 8500, 9500, 10500, 11500
     NETWORKS = [load_network("input/network_weights" + str(network_num) + ".h5") for network_num in NETWORK_NUMS]
 
     network_agent = NetworkAgent(None, ITERATIONS)
@@ -61,10 +64,16 @@ if __name__ == "__main__":
         for j in range(len(NETWORK_NUMS)):
             print("Evaluating network " + str(j))
             network_agent.network = NETWORKS[j]
+
             if i % 2 == 0:
+                print("BLACK AGENT")
+                # print(1 - evaluate(COMPARISON_AGENT, COMPARISON_AGENT))
                 result = 1 - evaluate(COMPARISON_AGENT, network_agent)
             else:
+                print("WHITE AGENT")
+                # print(evaluate(COMPARISON_AGENT, COMPARISON_AGENT))
                 result = evaluate(network_agent, COMPARISON_AGENT)
-            with open("output/eval/" + str(NETWORK_NUMS[j]) + "/" + str(i) + ".txt", 'w') as file:
-                file.writelines([str(result)])
+            print(result)
+            # with open("output/eval/" + str(NETWORK_NUMS[j]) + "/" + str(i) + ".txt", 'w') as file:
+            #     file.writelines([str(result)])
 

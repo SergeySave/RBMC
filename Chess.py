@@ -2,7 +2,7 @@
 import chess
 
 
-TYPES = ['♚', '♛', '♜', '♝', '♞', '♟', ' ', '♙', '♘', '♗', '♖', '♕', '♔']
+TYPES = ['k', 'q', 'r', 'b', 'n', 'p', ' ', 'P', 'N', 'B', 'R', 'Q', 'K']
 
 
 # Moves are encoded the same way as they  are in the AlphaGoZero paper
