@@ -31,9 +31,8 @@ class Chess:
     # Assumes that the move is legal
     def applymove(self, move):
         if move is None:
-            self.board.push(chess.Move.null())
-        else:
-            self.board.push(move)
+            move = chess.Move.null()
+        self.board.push(move)
         self.currentPlayer = 3 - self.currentPlayer
         return self
 
@@ -44,19 +43,19 @@ class Chess:
         return capture
 
     def try_apply_move(self, move):
-        if move in self.board.legal_moves:
+        if move in self.board.legal_moves or not bool(move):
             self.applymove(move)
             return True
         return False
 
     def try_apply_move_did_capture(self, move):
-        if move in self.board.legal_moves:
+        if move in self.board.legal_moves or not bool(move):
             return True, self.apply_move_did_capture(move)
         return False, False
 
     def getallmoves(self):
         legal_moves_ = [move for move in self.board.legal_moves]
-        legal_moves_.append(None)  # No move is a legal move
+        legal_moves_.append(chess.Move.null())  # No move is a legal move
         return legal_moves_
 
     def getboardstate(self, player):

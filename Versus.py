@@ -5,12 +5,12 @@ from ChessHeuristicMonteCarloTreeSearch import perform_search, pick_action
 def heuristic_move_selector(states, heuristic, num_iter, temp, explore):
     move_prob_sums = sum((Counter({n[0]: p*c for n, p in
                                    perform_search(s, num_iter, temp, explore, heuristic, None).items()})
-                          for s, c in states.items() if c > 1), Counter())
+                          for s, c in states.most_common(15)), Counter())
     prob_sum = 0.0
     power = 1.0 / temp
     probs = {}
     for m, p in move_prob_sums.items():
-        if m is not None:  # Don't actually consider None moves
+        if bool(m):  # Don't actually consider null moves
             prob = p ** power
             prob_sum += prob
             probs[m] = prob
@@ -23,7 +23,8 @@ if __name__ == "__main__":
     from ScanningChooser import heuristic_scan3x3
     from RandomPossibleGameGenerator import generate_possible_states
     from Information import SomethingMovedTo
-    from Turn import do_turn, material_heuristic
+    from Turn import do_turn
+    from BetterMaterialHeuristic import heuristic
 
     state = Chess()
 
@@ -82,7 +83,7 @@ if __name__ == "__main__":
         else:
             print("AI turn!")
             belief = do_turn(belief_states, info, heuristic_scan3x3,
-                             lambda x: heuristic_move_selector(x, material_heuristic, iterations, temperature,
+                             lambda x: heuristic_move_selector(x, heuristic, iterations, temperature,
                                                                exploration),
                              state, belief_size, now_fraction, max_attempts=retries)
             belief_states.append(belief)

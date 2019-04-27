@@ -23,23 +23,24 @@ class MyAgent(Player):
         super().__init__()  # Pycharm complains without this line
         from ScanningChooser import heuristic_scan3x3_loc
         from Versus import heuristic_move_selector
-        from Turn import material_heuristic
+        from BetterMaterialHeuristic import heuristic
         self.belief_states = []
         self.info = []
         self.exploration = 1.4142135624
-        self.temperature = 1.0
-        self.iterations = 1000
-        self.now_fraction = 3 / 5
+        self.temperature = 0.4
+        self.iterations = 400
+        self.now_fraction = 0.55
         self.retries = 10
-        self.belief_size = 2500
+        self.belief_size = 3000
         self.belief = Counter()
         self.color = None
         self.initialBoard = None
         self.noPreviousMoves = True
         self.region_selector = heuristic_scan3x3_loc
-        self.heursitic = material_heuristic
+        self.heursitic = heuristic
         self.move_selector = lambda x: heuristic_move_selector(x, self.heursitic, self.iterations,
                                                                self.temperature, self.exploration)
+        self.numScans = 0
 
     def handle_game_start(self, color, board):
         """
@@ -91,11 +92,20 @@ class MyAgent(Player):
         :return: chess.SQUARE -- the center of 3x3 section of the board you want to sense
         :example: choice = chess.A1
         """
+        # Anti-knight rush scan
+        # This should capture both the fastest a knight could get there and some slower options
+        preferred_scan = None
+        if self.color == chess.WHITE and self.numScans == 3:
+            preferred_scan = (3, 2)  # E4
+        elif self.color == chess.BLACK and self.numScans == 2:
+            preferred_scan = (3, 3)  # E5
+
+        self.numScans += 1
         if self.noPreviousMoves:
             return possible_sense[0] # Don't care as the result will not have any effect
         else:
             # Select a region
-            region_location = self.region_selector(self.belief)
+            region_location = self.region_selector(self.belief, preferred_scan)
             # Return the square at the center of this region
             # This should always be in the list of possible sensing locations
             return chess.square(region_location[0] + 1, region_location[1] + 1)
@@ -143,15 +153,18 @@ class MyAgent(Player):
         :example: choice = chess.Move(chess.G7, chess.G8, promotion=chess.KNIGHT) *default is Queen
         """
         print(str(seconds_left) + " seconds left, belief size: " + str(len(self.belief)))
-        if len(self.belief) < 50:
-            self.iterations = 500
-        elif len(self.belief) < 250:
-            self.iterations = 250
-        elif len(self.belief) < 500:
-            self.iterations = 100
-        else:
-            self.iterations = 50
-        return self.move_selector(self.belief)
+        # if len(self.belief) < 50:
+        #     self.iterations = 500
+        # elif len(self.belief) < 250:
+        #     self.iterations = 250
+        # elif len(self.belief) < 500:
+        #     self.iterations = 100
+        # else:
+        #     self.iterations = 50
+        desired = self.move_selector(self.belief)
+        if desired is None:
+            return random.choice(possible_moves)  # Making any move better than not moving right?
+        return desired
         
     def handle_move_result(self, requested_move, taken_move, captured_piece, captured_square, reason):
         """

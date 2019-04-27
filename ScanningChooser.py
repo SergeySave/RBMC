@@ -34,6 +34,16 @@ def most_configuration_heuristic(viewports):
     return random.choice([loc for loc, counter in viewports.items() if len(counter) == max_size])
 
 
+def maximal_minimal_possible_information_gain_heuristic(viewports, preferred):
+    max_possible_states = sum(next(iter(viewports.values())).values())
+    min_possible_information_gains = {loc: 1-max(counter.values())/max_possible_states for loc, counter in viewports.items()}
+    # If doing the preferred action will give us some information
+    if preferred is not None and min_possible_information_gains[preferred] > 0:
+        return preferred
+    max_min_gain = max(min_possible_information_gains.values())
+    return random.choice([loc for loc, gain in min_possible_information_gains.items() if gain == max_min_gain])
+
+
 def biggest_same_heuristic(viewports):
     max_size = max(len(counter.most_common(1)) for loc, counter in viewports.items())
     return random.choice([loc for loc, counter in viewports.items() if len(counter) == max_size])
@@ -45,9 +55,9 @@ def get_piece_code(piece):
     return piece.piece_type * (1 if piece.color == chess.WHITE else -1) + 6
 
 
-def heuristic_scan3x3_loc(now_states):
+def heuristic_scan3x3_loc(now_states, preferred=None):
     if len(now_states) == 0:
-        return random.randrange(6), random.randrange(6)
+        return (random.randrange(6), random.randrange(6)) if preferred is None else preferred
     viewports = {}
     for board, count in now_states.items():
         result = {}
@@ -63,7 +73,7 @@ def heuristic_scan3x3_loc(now_states):
                 if viewport_location not in viewports.keys():
                     viewports[viewport_location] = Counter()
                 viewports[viewport_location][encoding] += count
-    return most_configuration_heuristic(viewports)
+    return maximal_minimal_possible_information_gain_heuristic(viewports, preferred)
 
 
 def heuristic_scan3x3(now_states, game):

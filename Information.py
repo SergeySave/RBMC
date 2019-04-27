@@ -72,7 +72,7 @@ class LegalMove(Information):
         self.move = move
 
     def consistent_with(self, state, action):
-        return (self.move is None) or (self.move in state.board.legal_moves)
+        return (not bool(self.move)) or (self.move in state.board.legal_moves)
 
 
 class NothingInSix(Information):

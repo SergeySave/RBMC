@@ -55,8 +55,7 @@ def generate_states_from_priors(previous_beliefs, info_list, fraction, n_total, 
         return Counter({Chess(): n_total})
     my_move = info_list[-1]
     nows = generate_states_from_priors_pre_move(previous_beliefs, info_list[:-1], fraction, n_total, max_attempts=max_attempts)
-    if my_move is not None:
-        nows = Counter({g.applymove(my_move): c for g, c in nows.items()})
+    nows = Counter({g.applymove(my_move): c for g, c in nows.items()})
     return nows
 
 
@@ -77,7 +76,7 @@ def material_heuristic(state):
 def get_probability_distribution(state, heuristic, temperature=1.0):
     power = 1.0 / temperature
     result = {}
-    for m in state.board.legal_moves:
+    for m in state.getallmoves():
         state.board.push(m)
         result[m] = heuristic(state) ** power
         state.board.pop()
@@ -136,7 +135,7 @@ def do_turn(previous_beliefs, info_list, region_selector, move_selector, game, d
         opponent_move.append(LegalMove(move))
 
         next_states = Counter({g.clone().applymove(move): c for g, c in now_states.items() if
-                               (move in g.board.legal_moves)})
+                               (not bool(move) or move in g.board.legal_moves)})
     else:
         # We made no move (turn skipped)
         info_list.append(None)

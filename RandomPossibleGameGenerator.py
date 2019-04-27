@@ -76,7 +76,7 @@ def generate_possible_states(n, information, max_attempts=5):
 
             # Try applying the move
             new_states = Counter({g.clone().applymove(info): c for g, c in states.items() if
-                                  (info in g.board.legal_moves)})
+                                  (info in g.getallmoves())})
         else:
             # this is the next possible states
             new_states = sum((Counter(d) for d in [generate_next_states(g, c, info) for g, c in states.items()]),
