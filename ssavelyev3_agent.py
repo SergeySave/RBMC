@@ -17,13 +17,13 @@ from collections import Counter
 
 
 # TODO: Rename this class to what you would like your bot to be named during the game.
-class MyAgent(Player):
+class SSavelyev3Agent(Player):
 
     def __init__(self):
         super().__init__()  # Pycharm complains without this line
-        from ScanningChooser import heuristic_scan3x3_loc
-        from Versus import heuristic_move_selector
-        from BetterMaterialHeuristic import heuristic
+        from ssavelyev3_ScanningChooser import heuristic_scan3x3_loc
+        from ssavelyev3_Versus import heuristic_move_selector
+        from ssavelyev3_BetterMaterialHeuristic import heuristic
         self.belief_states = []
         self.info = []
         self.exploration = 1.4142135624
@@ -50,14 +50,14 @@ class MyAgent(Player):
         :param board: chess.Board -- initial board state
         :return:
         """
-        from RandomPossibleGameGenerator import generate_possible_states
+        from ssavelyev3_RandomPossibleGameGenerator import generate_possible_states
         self.color = color
         self.initialBoard = board
         self.belief = generate_possible_states(self.belief_size, [], max_attempts=1)
         self.belief_states.append(self.belief)
         if color == chess.BLACK:
             self.noPreviousMoves = False
-            from Turn import material_heuristic
+            from ssavelyev3_Turn import material_heuristic
             self.heursitic = lambda x: 1 - material_heuristic(x)
 
     def handle_opponent_move_result(self, captured_piece, captured_square):
@@ -68,12 +68,12 @@ class MyAgent(Player):
         :param captured_square: chess.Square - position where your piece was captured
         """
         if not self.noPreviousMoves:
-            from Information import SomethingMovedTo
+            from ssavelyev3_Information import SomethingMovedTo
             opponent_move = [SomethingMovedTo(captured_square)] if captured_piece else []
             self.info.append(opponent_move)
 
             # Propagate moves 1 step forward
-            from Turn import generate_states_from_priors_pre_move, generate_next_states_probs
+            from ssavelyev3_Turn import generate_states_from_priors_pre_move, generate_next_states_probs
             self.belief = sum((Counter(d) for d in (generate_next_states_probs(state, amount, opponent_move)
                                                     for state, amount in self.belief.items())), Counter())
 
@@ -126,7 +126,7 @@ class MyAgent(Player):
         """
         if not self.noPreviousMoves:
             # Add the information to our information list
-            from Information import ViewportInformation
+            from ssavelyev3_Information import ViewportInformation
             scan_viewport_info = ViewportInformation(dict(sense_result))
             self.info[-1].append(scan_viewport_info)
             # Remove illegal states
@@ -134,7 +134,7 @@ class MyAgent(Player):
                                   scan_viewport_info.consistent_with(state, None)})
 
             # Repopulate with legal states
-            from Turn import generate_states_from_priors_pre_move
+            from ssavelyev3_Turn import generate_states_from_priors_pre_move
             self.belief += generate_states_from_priors_pre_move(self.belief_states, self.info, self.now_fraction,
                                                                 self.belief_size - sum(self.belief.values()),
                                                                 max_attempts=self.retries)
@@ -152,7 +152,7 @@ class MyAgent(Player):
         :condition: If you intend to move a pawn for promotion other than Queen, please specify the promotion parameter
         :example: choice = chess.Move(chess.G7, chess.G8, promotion=chess.KNIGHT) *default is Queen
         """
-        print(str(seconds_left) + " seconds left, belief size: " + str(len(self.belief)))
+        print(str(seconds_left) + " seconds left, hypotheses: " + str(len(self.belief)))
         # if len(self.belief) < 50:
         #     self.iterations = 500
         # elif len(self.belief) < 250:
@@ -177,8 +177,8 @@ class MyAgent(Player):
         :param captured_piece: bool - true if you captured your opponents piece
         :param captured_square: chess.Square - position where you captured the piece
         """
-        from Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all
-        from Turn import generate_states_from_priors
+        from ssavelyev3_Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all
+        from ssavelyev3_Turn import generate_states_from_priors
         if not self.noPreviousMoves:
             added_beliefs = []
             if requested_move != taken_move:  # The requested move was illegal

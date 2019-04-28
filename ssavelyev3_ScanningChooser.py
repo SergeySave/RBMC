@@ -1,8 +1,8 @@
 import itertools
 import chess
-from Information import ViewportInformation
 from collections import Counter
 import random
+from ssavelyev3_Information import ViewportInformation
 
 
 def perform_scan(start_file, start_rank, num_files, num_ranks, game):

@@ -47,10 +47,10 @@
 #
 
 
-from Chess import Chess
 import random
 from collections import Counter
-from Information import *
+from ssavelyev3_Chess import Chess
+from ssavelyev3_Information import *
 
 
 def generate_next_states(game, counter, info_list):
@@ -91,15 +91,3 @@ def generate_possible_states(n, information, max_attempts=5):
         states = Counter(random.choices(list(new_states.keys()), k=misses)) + new_states
     return states
 
-
-if __name__ == "__main__":
-    for stat, count in generate_possible_states(1000, [chess.Move.from_uci('b1c3'),
-                                                       [NothingInSix()],
-                                                       [MovedKnight(), BlackMissingPawn()],
-                                                       [],
-                                                       [],
-                                                       [],
-                                                       []], max_attempts=1).items():
-        print(count)
-        print(stat.tostring())
-        print()

@@ -10,12 +10,12 @@
 # and then refill the set of configurations
 
 
-from RandomPossibleGameGenerator import generate_possible_states, generate_next_states
 from collections import Counter
-from Information import *
 import math
 import random
-from Chess import Chess
+from ssavelyev3_RandomPossibleGameGenerator import generate_possible_states, generate_next_states
+from ssavelyev3_Information import *
+from ssavelyev3_Chess import Chess
 
 
 # last element in previous_beliefs is the belief we started with before our scan
@@ -150,90 +150,3 @@ def do_turn(previous_beliefs, info_list, region_selector, move_selector, game, d
 
     return next_states
 
-
-if __name__ == "__main__":
-    from Chess import Chess
-    from ScanningChooser import heuristic_scan3x3
-    true_state = Chess()
-    belief_size = 2500
-    retries = 10
-    now_fraction = 3/5
-    all_belief_states = []
-    belief = generate_possible_states(belief_size, [], max_attempts=1)
-    all_belief_states.append(belief)
-    info = []
-
-    is_ai_move = False
-
-    for move in ["d4", "Nf6", "Bg5", "e6", "e4", "Be7", "Nd2", "d5", "e5", "Nfd7", "Be3", "b6", "Nh3", "Bb7", "Qg4",
-                 "g6", "Ng5", "Nf8", "h4", "h6", "Ngf3", "Na6", "c3", "Qd7", "a4", "O-O-O", "b4", "c5", "Bb5", "Qc7",
-                 "dxc5", "bxc5", "O-O", "f5", "exf6", "Bxf6", "Rac1", "h5", "Qh3", "Kb8", "Rfe1", "Bc8", "Bxa6",
-                 "Bxa6", "Bxc5", "Bc8", "c4", "Be7", "Bxe7", "Qxe7", "Qg3+", "Qd6", "Ne5", "Rd7", "Nxd7+", "Kc7",
-                 "Ne5", "Kb7", "c5", "Qc7", "c6+", "Ka8", "b5", "Rh7", "Qf4", "Rh8", "Ndf3", "a6", "Nd4", "Nh7",
-                 "bxa6", "Rf8", "Qe3", "Bxa6", "Nb5", "Bxb5", "axb5", "Kb8", "b6", "Qe7", "Ra1", "Qd6", "Nd7+",
-                 "Kc8", "Ra8+"]:
-        if is_ai_move:
-            print(true_state.tostring())
-            belief = do_turn(all_belief_states, info, heuristic_scan3x3,
-                             lambda x: true_state.board.parse_san(move),
-                             true_state, belief_size, now_fraction, max_attempts=retries)
-            all_belief_states.append(belief)
-            print(len(belief), true_state in belief.keys(), max(belief.values()) == belief[true_state])
-            print()
-            print()
-        else:
-            move = true_state.board.parse_san(move)
-            did_capture = true_state.apply_move_did_capture(move)
-            info.append([SomethingMovedTo(move.to_square)] if did_capture else [])
-
-        is_ai_move = not is_ai_move
-
-    # did_capture = true_state.apply_move_did_capture(chess.Move.from_uci("b1c3"))
-    #
-    # belief2 = do_turn(belief, info, heuristic_scan3x3,
-    #                   lambda x: chess.Move.from_uci("g8f6"),
-    #                   true_state, belief_size, max_attempts=retries)
-    #
-    # true_state.apply_move_did_capture(chess.Move.from_uci("g1f3"))
-    # info.append([])
-    # belief3 = do_turn(belief2, info, heuristic_scan3x3,
-    #                   lambda x: chess.Move.from_uci("f6e4"),
-    #                   true_state, belief_size, max_attempts=retries)
-    #
-    # true_state.applymove(chess.Move.from_uci("c3e4"))
-    # info.append([SomethingMovedTo(chess.E4)])
-    # belief4 = do_turn(belief3, info, heuristic_scan3x3,
-    #                   lambda x: chess.Move.from_uci("b8a6"),
-    #                   true_state, belief_size, max_attempts=retries)
-
-    # print(belief)
-    # print("--------------")
-    # print(len(belief2))
-    # for board, count in belief2.items():
-    #     print(count)
-    #     print(board.tostring())
-    #     print()
-    # print("--------------")
-    # print(len(belief3))
-    # for board, count in belief3.items():
-    #     print(count)
-    #     print(board.tostring())
-    #     print()
-    # print("--------------")
-    # print(len(belief4))
-    # for board, count in belief4.items():
-    #     print(count)
-    #     print(board.tostring())
-    #     print()
-
-"""
-1. d4 Nf6 2. Bg5 e6 3. e4 Be7 4. Nd2 d5 5. e5 Nfd7 6. Be3 b6 7. Nh3 Bb7 8. Qg4
-g6 9. Ng5 Nf8 10. h4 h6 11. Ngf3 Na6 12. c3 Qd7 13. a4 O-O-O 14. b4 c5 15. Bb5
-Qc7 16. dxc5 bxc5 17. O-O f5 18. exf6 Bxf6 19. Rac1 h5 20. Qh3 Kb8 21. Rfe1 Bc8
-22. Bxa6 Bxa6 23. Bxc5 Bc8 24. c4 Be7 25. Bxe7 Qxe7 26. Qg3+ Qd6 27. Ne5 Rd7
-28. Nxd7+ Kc7 29. Ne5 Kb7 30. c5 Qc7 31. c6+ Ka8 32. b5 Rh7 33. Qf4 Rh8 34.
-Ndf3 a6 35. Nd4 Nh7 36. bxa6 Rf8 37. Qe3 Bxa6 38. Nb5 Bxb5 39. axb5 Kb8 40. b6
-Qe7 41. Ra1 Qd6 42. Nd7+ Kc8 43. Ra8+ 1-0
-
-
-"""

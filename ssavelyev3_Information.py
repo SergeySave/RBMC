@@ -20,7 +20,7 @@ class ViewportInformation(Information):
         return all(state.board.piece_at(tile) == contents for tile, contents in self.info.items())
 
     def __repr__(self):
-        from Chess import TYPES
+        from ssavelyev3_Chess import TYPES
         result = ""
         for i in range(8):
             for j in range(8):
@@ -73,24 +73,3 @@ class LegalMove(Information):
 
     def consistent_with(self, state, action):
         return (not bool(self.move)) or (self.move in state.board.legal_moves)
-
-
-class NothingInSix(Information):
-    def consistent_with(self, s, action):
-        return s.gettype(chess.A6) + s.gettype(chess.B6) + s.gettype(chess.C6) + s.gettype(chess.D6) + \
-               s.gettype(chess.E6) + s.gettype(chess.F6) + s.gettype(chess.G6) + s.gettype(chess.H6) == 0
-
-
-class MovedKnight(Information):
-    def consistent_with(self, s, action):
-        return s.gettype(action.to_square) == chess.KNIGHT
-
-
-class BlackMissingPawn(Information):
-    def consistent_with(self, state, action):
-        return state.board.fen().count('p') < 8  # Using fen bad for efficiency
-
-
-class WhiteMissingKnight(Information):
-    def consistent_with(self, state, action):
-        return state.board.fen().count('N') < 2  # Using fen bad for efficiency
