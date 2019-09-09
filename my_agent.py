@@ -15,23 +15,31 @@ from player import Player
 
 from collections import Counter
 
+from ScanningChooser import heuristic_scan3x3_loc
+from Versus import heuristic_move_selector
+from Turn import material_heuristic
+from RandomPossibleGameGenerator import generate_possible_states
+from Information import SomethingMovedTo
+from Information import ViewportInformation
+from Turn import generate_next_states_probs
+from StateGeneratorNormal import generate_states_from_priors_pre_move, update_prior_beliefs
+from Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all
+from Turn import generate_states_from_priors
+
 
 # TODO: Rename this class to what you would like your bot to be named during the game.
 class MyAgent(Player):
 
     def __init__(self):
         super().__init__()  # Pycharm complains without this line
-        from ScanningChooser import heuristic_scan3x3_loc
-        from Versus import heuristic_move_selector
-        from Turn import material_heuristic
         self.belief_states = []
         self.info = []
         self.exploration = 1.4142135624
         self.temperature = 1.0
         self.iterations = 1000
-        self.now_fraction = 3 / 5
+        self.now_fraction = 6 / 10
         self.retries = 10
-        self.belief_size = 2500
+        self.belief_size = 7500
         self.belief = Counter()
         self.color = None
         self.initialBoard = None
@@ -40,6 +48,7 @@ class MyAgent(Player):
         self.heursitic = material_heuristic
         self.move_selector = lambda x: heuristic_move_selector(x, self.heursitic, self.iterations,
                                                                self.temperature, self.exploration)
+        self.prev_prop = False
 
     def handle_game_start(self, color, board):
         """
@@ -49,7 +58,6 @@ class MyAgent(Player):
         :param board: chess.Board -- initial board state
         :return:
         """
-        from RandomPossibleGameGenerator import generate_possible_states
         self.color = color
         self.initialBoard = board
         self.belief = generate_possible_states(self.belief_size, [], max_attempts=1)
@@ -67,18 +75,22 @@ class MyAgent(Player):
         :param captured_square: chess.Square - position where your piece was captured
         """
         if not self.noPreviousMoves:
-            from Information import SomethingMovedTo
             opponent_move = [SomethingMovedTo(captured_square)] if captured_piece else []
             self.info.append(opponent_move)
 
-            # Propagate moves 1 step forward
-            from Turn import generate_states_from_priors_pre_move, generate_next_states_probs
-            self.belief = sum((Counter(d) for d in (generate_next_states_probs(state, amount, opponent_move)
-                                                    for state, amount in self.belief.items())), Counter())
+            self.prev_prop = len(self.belief) <= 5
 
-            self.belief += generate_states_from_priors_pre_move(self.belief_states, self.info, self.now_fraction,
-                                                                self.belief_size - sum(self.belief.values()),
-                                                                max_attempts=self.retries)
+            if self.prev_prop:
+                # Propagate moves 1 step forward
+                from Turn import generate_states_from_priors_pre_move, generate_next_states_probs
+                self.belief = sum((Counter(d) for d in (generate_next_states_probs(state, amount, opponent_move)
+                                                        for state, amount in self.belief.items())), Counter())
+
+                self.belief += generate_states_from_priors_pre_move(self.belief_states, self.info, self.now_fraction,
+                                                                    self.belief_size - sum(self.belief.values()),
+                                                                    len(self.belief_states) - 1,
+                                                                    len(self.info) - 1,
+                                                                    max_attempts=self.retries)
 
     def choose_sense(self, possible_sense, possible_moves, seconds_left):
         """
@@ -116,18 +128,32 @@ class MyAgent(Player):
         """
         if not self.noPreviousMoves:
             # Add the information to our information list
-            from Information import ViewportInformation
             scan_viewport_info = ViewportInformation(dict(sense_result))
             self.info[-1].append(scan_viewport_info)
-            # Remove illegal states
-            self.belief = Counter({state: amount for state, amount in self.belief.items() if
-                                  scan_viewport_info.consistent_with(state, None)})
 
-            # Repopulate with legal states
-            from Turn import generate_states_from_priors_pre_move
-            self.belief += generate_states_from_priors_pre_move(self.belief_states, self.info, self.now_fraction,
-                                                                self.belief_size - sum(self.belief.values()),
-                                                                max_attempts=self.retries)
+            if self.prev_prop:
+                # Remove illegal states
+                self.belief = Counter({state: amount for state, amount in self.belief.items() if
+                                      scan_viewport_info.consistent_with(state, None)})
+            else:
+                # Propogate moves 1 step forward
+                self.belief = sum(
+                    (Counter(d) for d in (generate_next_states_probs(state, amount, self.info[-1]) for state, amount in
+                                          self.belief.items())), Counter())
+
+            if int(self.belief_size / 2) - sum(self.belief.values()) > 0:
+                state_gens = generate_states_from_priors_pre_move(self.belief_states, self.info, self.now_fraction,
+                                                                  int(self.belief_size / 2) - sum(self.belief.values()),
+                                                                  len(self.belief_states) - 1,
+                                                                  len(self.info) - 1,
+                                                                  max_attempts=self.retries)
+                self.belief += update_prior_beliefs(self.belief_states, state_gens, self.belief_size)
+
+            # # Repopulate with legal states
+            # from Turn import generate_states_from_priors_pre_move
+            # self.belief += generate_states_from_priors_pre_move(self.belief_states, self.info, self.now_fraction,
+            #                                                     self.belief_size - sum(self.belief.values()),
+            #                                                     max_attempts=self.retries)
 
     def choose_move(self, possible_moves, seconds_left):
         """
@@ -164,8 +190,6 @@ class MyAgent(Player):
         :param captured_piece: bool - true if you captured your opponents piece
         :param captured_square: chess.Square - position where you captured the piece
         """
-        from Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all
-        from Turn import generate_states_from_priors
         if not self.noPreviousMoves:
             added_beliefs = []
             if requested_move != taken_move:  # The requested move was illegal
@@ -183,6 +207,8 @@ class MyAgent(Player):
         self.info.append(taken_move)
         self.belief += generate_states_from_priors(self.belief_states, self.info, self.now_fraction,
                                                    self.belief_size - sum(self.belief.values()),
+                                                   len(self.belief_states) - 1,
+                                                   len(self.info) - 1,
                                                    max_attempts=self.retries)
         self.belief_states.append(self.belief)
         

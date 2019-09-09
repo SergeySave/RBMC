@@ -13,7 +13,7 @@ class Chess:
 
     def clone(self):
         clone = Chess()
-        clone.board = self.board.copy()
+        clone.board = self.board.copy(stack=False)
         clone.currentPlayer = self.currentPlayer
         return clone
 
@@ -55,7 +55,7 @@ class Chess:
         return False, False
 
     def getallmoves(self):
-        legal_moves_ = [move for move in self.board.legal_moves]
+        legal_moves_ = list(self.board.legal_moves)
         legal_moves_.append(None)  # No move is a legal move
         return legal_moves_
 
