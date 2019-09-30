@@ -12,7 +12,9 @@ Source:         Adapted from recon-chess (https://pypi.org/project/reconchess/)
 import random
 import chess
 from player import Player
+import sys
 
+sys.path.insert(0, './agent')
 
 class Random(Player):
         
