@@ -9,7 +9,8 @@ if __name__ == "__main__":
         cfg = yaml.safe_load(file.read())
 
     net = Net()
-    net.parse_proto("weights_run1_42700.pb.gz")
+    # net.parse_proto("weights_run1_42700.pb.gz")  # 2019-07-02 15:13:26 +00:00
+    net.parse_proto("weights_run3_42872.pb.gz")
 
     filters, blocks = net.filters(), net.blocks()
     weights = net.get_weights()
