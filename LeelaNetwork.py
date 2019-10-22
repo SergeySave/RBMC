@@ -93,16 +93,16 @@ def convert_states(states):
         # As we don't really care about repetitions I will ignore them for now
         input_planes[base + 12] = np.repeat(0, N*N)
 
-        if history_index < 0 and board.board.ep_square is not None:
-            idx = 1 << board.board.ep_square
-            if idx < 8:
-                input_planes[base + 0] += np.unpackbits(np.array([
-                    ((0x0000000000000100 - 0x0000000001000000) << idx)
-                ], ">u8").view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
-            else:
-                input_planes[base + 0] += np.unpackbits(np.array([
-                    ((0x0001000000000000 - 0x0000000100000000) << (idx - 56))
-                ], ">u8").view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+        # if history_index < 0 and board.board.ep_square is not None:
+        #     idx = board.board.ep_square #(chess.square_file(board.board.ep_square) * 8 + chess.square_rank(board.board.ep_square))
+        #     if chess.square_rank(board.board.ep_square) < 4:
+        #         input_planes[base + 0] += np.unpackbits(np.array([
+        #             ((0x0000000000000100 - 0x0000000001000000) << chess.square_file(board.board.ep_square))
+        #         ], ">u8").view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+        #     else:
+        #         input_planes[base + 6] += np.unpackbits(np.array([
+        #             ((0x0001000000000000 - 0x0000000100000000) << (chess.square_file(board.board.ep_square)))
+        #         ], ">u8").view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
 
         if history_index > 0:
             flip = not flip

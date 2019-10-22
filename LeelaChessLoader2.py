@@ -6,7 +6,7 @@ from LeelaNetwork import LeelaNetwork
 from net import Net
 import tfprocess
 import yaml
-
+import chess
 from policy_index import policy_index
 
 if __name__ == "__main__":
