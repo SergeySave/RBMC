@@ -81,6 +81,9 @@ class Network:
     def save(self, file_name):
         self.model.save_weights(file_name)
 
+    def get_move_index(self, move):
+        return get_move_index(move)
+
 
 def load_network(file_name):
     result = Network()

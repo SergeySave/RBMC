@@ -10,17 +10,20 @@ class Chess:
     def __init__(self):
         self.board = chess.Board()
         self.currentPlayer = 1
+        self.no_capture_ply = 0
 
     def clone(self):
         clone = Chess()
         clone.board = self.board.copy(stack=False)
         clone.currentPlayer = self.currentPlayer
+        clone.no_capture_ply = self.no_capture_ply
         return clone
 
     def mirror(self):
         mirror = Chess()
         mirror.board = self.board.mirror()
         mirror.currentPlayer = 3 - self.currentPlayer
+        mirror.no_capture_ply = self.no_capture_ply
         return mirror
 
     def __eq__(self, other):
@@ -30,17 +33,21 @@ class Chess:
 
     # Assumes that the move is legal
     def applymove(self, move):
-        if move is None:
-            self.board.push(chess.Move.null())
-        else:
-            self.board.push(move)
-        self.currentPlayer = 3 - self.currentPlayer
+        self.apply_move_did_capture(move)
         return self
 
     # Assumes that the move is legal
     def apply_move_did_capture(self, move):
         capture = self.board.piece_at(move.to_square) is not None
-        self.applymove(move)
+        if move is None:
+            self.board.push(chess.Move.null())
+        else:
+            self.board.push(move)
+        self.currentPlayer = 3 - self.currentPlayer
+        if capture:
+            self.no_capture_ply = 0
+        else:
+            self.no_capture_ply += 1
         return capture
 
     def try_apply_move(self, move):

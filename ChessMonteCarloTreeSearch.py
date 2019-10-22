@@ -1,6 +1,6 @@
 import math
 import random
-from Network import get_move_index, mirror_move
+from Network import mirror_move
 
 
 class Node:
@@ -27,8 +27,8 @@ class Node:
         return self
 
 
-def get_prob_for_move(move, probs):
-    return probs[get_move_index(move)]
+def get_prob_for_move(move, probs, network):
+    return probs[network.get_move_index(move)]
 
 
 def smart_apply_move(state, move, player):
@@ -50,7 +50,7 @@ def expand_and_eval(node, states, network):
     #     base_state = base_state
     moves = base_state.getallmoves()
     node.children = [Node(smart_apply_move(base_state, move, node.player), move if node.player == 1 else mirror_move(move),
-                          get_prob_for_move(move, probs[0]), node) for move in moves if move is not None]
+                          get_prob_for_move(move, probs[0], network), node) for move in moves if move is not None]
     # At this point the probabilities aren't probabilities but they are just values
     if len(node.children) > 0:
         denominator = sum([math.exp(child.prior) for child in node.children])

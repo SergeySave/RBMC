@@ -118,7 +118,7 @@ class TFProcess:
         config = tf.ConfigProto(gpu_options=gpu_options)
         self.session = tf.Session(config=config)
 
-        self.training = tf.placeholder(tf.bool)
+        self.training = tf.placeholder(tf.bool, name="Training")
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         self.learning_rate = tf.placeholder(tf.float32)
 
@@ -806,42 +806,42 @@ class TFProcess:
             flow = self.residual_block(flow, self.RESIDUAL_FILTERS)
 
         # Policy head
-        if self.POLICY_HEAD == pb.NetworkFormat.POLICY_CONVOLUTION:
-            conv_pol = self.conv_block(flow, filter_size=3,
-                                       input_channels=self.RESIDUAL_FILTERS,
-                                       output_channels=self.RESIDUAL_FILTERS)
-            W_pol_conv = weight_variable([3, 3,
-                                          self.RESIDUAL_FILTERS, 80], name='W_pol_conv2')
-            b_pol_conv = bias_variable([80], name='b_pol_conv2')
-            self.weights.append(W_pol_conv)
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, b_pol_conv)
-            self.weights.append(b_pol_conv)
-            conv_pol2 = tf.nn.bias_add(
-                conv2d(conv_pol, W_pol_conv), b_pol_conv, data_format='NCHW')
-
-            h_conv_pol_flat = tf.reshape(conv_pol2, [-1, 80*8*8])
-            fc1_init = tf.constant(lc0_az_policy_map.make_map())
-            W_fc1 = tf.get_variable("policy_map",
-                                    initializer=fc1_init,
-                                    trainable=False)
-            h_fc1 = tf.matmul(h_conv_pol_flat, W_fc1, name='policy_head')
-        elif self.POLICY_HEAD == pb.NetworkFormat.POLICY_CLASSICAL:
-            conv_pol = self.conv_block(flow, filter_size=1,
-                                       input_channels=self.RESIDUAL_FILTERS,
-                                       output_channels=self.policy_channels)
-            h_conv_pol_flat = tf.reshape(
-                conv_pol, [-1, self.policy_channels*8*8])
-            W_fc1 = weight_variable(
-                [self.policy_channels*8*8, 1858], name='fc1/weight')
-            b_fc1 = bias_variable([1858], name='fc1/bias')
-            self.weights.append(W_fc1)
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, b_fc1)
-            self.weights.append(b_fc1)
-            h_fc1 = tf.add(tf.matmul(h_conv_pol_flat, W_fc1),
-                           b_fc1, name='policy_head')
-        else:
-            raise ValueError(
-                "Unknown policy head type {}".format(self.POLICY_HEAD))
+        # if self.POLICY_HEAD == pb.NetworkFormat.POLICY_CONVOLUTION:
+        #     conv_pol = self.conv_block(flow, filter_size=3,
+        #                                input_channels=self.RESIDUAL_FILTERS,
+        #                                output_channels=self.RESIDUAL_FILTERS)
+        #     W_pol_conv = weight_variable([3, 3,
+        #                                   self.RESIDUAL_FILTERS, 80], name='W_pol_conv2')
+        #     b_pol_conv = bias_variable([80], name='b_pol_conv2')
+        #     self.weights.append(W_pol_conv)
+        #     tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, b_pol_conv)
+        #     self.weights.append(b_pol_conv)
+        #     conv_pol2 = tf.nn.bias_add(
+        #         conv2d(conv_pol, W_pol_conv), b_pol_conv, data_format='NCHW')
+        #
+        #     h_conv_pol_flat = tf.reshape(conv_pol2, [-1, 80*8*8])
+        #     fc1_init = tf.constant(lc0_az_policy_map.make_map())
+        #     W_fc1 = tf.get_variable("policy_map",
+        #                             initializer=fc1_init,
+        #                             trainable=False)
+        #     h_fc1 = tf.matmul(h_conv_pol_flat, W_fc1, name='policy_head')
+        # elif self.POLICY_HEAD == pb.NetworkFormat.POLICY_CLASSICAL:
+        conv_pol = self.conv_block(flow, filter_size=1,
+                                   input_channels=self.RESIDUAL_FILTERS,
+                                   output_channels=self.policy_channels)
+        h_conv_pol_flat = tf.reshape(
+            conv_pol, [-1, self.policy_channels*8*8])
+        W_fc1 = weight_variable(
+            [self.policy_channels*8*8, 1858], name='fc1/weight')
+        b_fc1 = bias_variable([1858], name='fc1/bias')
+        self.weights.append(W_fc1)
+        tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, b_fc1)
+        self.weights.append(b_fc1)
+        h_fc1 = tf.add(tf.matmul(h_conv_pol_flat, W_fc1),
+                       b_fc1, name='policy_head')
+        # else:
+        #     raise ValueError(
+        #         "Unknown policy head type {}".format(self.POLICY_HEAD))
 
         # Value head
         conv_val = self.conv_block(flow, filter_size=1,
@@ -863,6 +863,5 @@ class TFProcess:
             h_fc3 = tf.nn.tanh(h_fc3)
         else:
             tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, b_fc3)
-
 
         return h_fc1, h_fc3
