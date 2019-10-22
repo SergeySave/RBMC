@@ -1,6 +1,7 @@
 import numpy as np
 import chess
 from Constants import *
+from policy_map import policy_map
 
 
 class LeelaNetwork:
@@ -15,14 +16,14 @@ class LeelaNetwork:
         })
 
     def get_move_index(self, move):
-        return None
+        return policy_map[move.uci()]
 
 
 def convert_states(states):
     kMoveHIstory = 8
     kPlanesPerBoard = 13
     kAuxPlaneBase = kPlanesPerBoard * kMoveHIstory
-    input_planes = np.empty((kAuxPlaneBase+8, N*N))
+    input_planes = np.zeros((kAuxPlaneBase+8, N*N))
 
     current_board = states[-1].board
     we_are_black = False
