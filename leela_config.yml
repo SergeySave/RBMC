@@ -33,6 +33,7 @@ training:
     policy_loss_weight: 1.0            # weight of policy loss
     value_loss_weight: 1.0            # weight of value loss
     path: '/work/lc0/dev/networks'         # network storage dir
+    renorm: true
 
 model:
   filters: 256

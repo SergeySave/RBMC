@@ -32,10 +32,13 @@ if __name__ == "__main__":
     tfp.replace_weights(weights)
 
     network = LeelaNetwork(tfp, x[0])
-    y, z = network.evaluate([Chess()])
+    board = Chess()
+    y, z = network.evaluate([board])
 
-    for i in range(len(policy_index)):
-        print(policy_index[i] + " : " + y[i])
+    for move in board.getallmoves():
+        if move is not None:
+            i = policy_index.index(move.uci())
+            print(board.board.san(move) + " : " + str(y[0, i]))
 
     for i in z:
-        print(i)
+        print(str(i))
