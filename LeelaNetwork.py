@@ -10,10 +10,11 @@ class LeelaNetwork:
         self.x = x
 
     def evaluate(self, states):
-        return self.tfp.session.run([self.tfp.y_conv, self.tfp.z_conv], {
+        p,v = self.tfp.session.run([self.tfp.y_conv, self.tfp.z_conv], {
             self.x: np.array([convert_states(states)]),
             "Training:0": False
         })
+        return p,(v[0, 0] + 0.5 * v[0, 1])
 
     def get_move_index(self, move):
         return policy_map[move.uci()]
@@ -65,30 +66,30 @@ def convert_states(states):
 
         base = i * kPlanesPerBoard
         input_planes[base + 0] = np.unpackbits(np.array([board.board.pieces_mask(chess.PAWN, our_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
         input_planes[base + 1] = np.unpackbits(np.array([board.board.pieces_mask(chess.KNIGHT, our_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
         input_planes[base + 2] = np.unpackbits(np.array([board.board.pieces_mask(chess.BISHOP, our_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
         input_planes[base + 3] = np.unpackbits(np.array([board.board.pieces_mask(chess.ROOK, our_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
         input_planes[base + 4] = np.unpackbits(np.array([board.board.pieces_mask(chess.QUEEN, our_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
         input_planes[base + 5] = np.unpackbits(np.array([board.board.pieces_mask(chess.KING, our_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
 
         input_planes[base + 6] = np.unpackbits(np.array([board.board.pieces_mask(chess.PAWN, their_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
         input_planes[base + 7] = np.unpackbits(np.array([board.board.pieces_mask(chess.KNIGHT, their_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
         input_planes[base + 8] = np.unpackbits(np.array([board.board.pieces_mask(chess.BISHOP, their_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
         input_planes[base + 9] = np.unpackbits(np.array([board.board.pieces_mask(chess.ROOK, their_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
         input_planes[base + 10] = np.unpackbits(np.array([board.board.pieces_mask(chess.QUEEN, their_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
         input_planes[base + 11] = np.unpackbits(np.array([board.board.pieces_mask(chess.KING, their_color)], ">u8")
-                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))[::-1]
+                                               .view(np.uint8)).reshape((8, 8)).T.reshape((-1))
 
         # As we don't really care about repetitions I will ignore them for now
         input_planes[base + 12] = np.repeat(0, N*N)

@@ -8,6 +8,8 @@ import tfprocess
 import yaml
 import chess
 from policy_index import policy_index
+from Trainer import *
+from Constants import *
 
 if __name__ == "__main__":
     with open("leela_config.yml", "rb") as file:
@@ -32,12 +34,4 @@ if __name__ == "__main__":
     tfp.replace_weights(weights)
 
     network = LeelaNetwork(tfp, x[0])
-    board = Chess()
-    y, z = network.evaluate([board])
-
-    for move in board.getallmoves():
-        if move is not None:
-            i = policy_index.index(move.uci())
-            print(board.board.san(move) + " : " + str(y[0, i]))
-
-    print(z)
+    print(generate_game(network, network, EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, printing=True))

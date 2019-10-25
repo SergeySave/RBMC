@@ -42,7 +42,7 @@ def smart_apply_move(state, move, player):
 
 def expand_and_eval(node, states, network):
     probs, value = network.evaluate(states)
-    node.value = value[0][0]
+    node.value = value
     base_state = node.state
     # if node.player == 2:  # If it is black's turn flip the board
     # base_state = base_state.mirror()
@@ -53,9 +53,10 @@ def expand_and_eval(node, states, network):
                           get_prob_for_move(move, probs[0], network), node) for move in moves if move is not None]
     # At this point the probabilities aren't probabilities but they are just values
     if len(node.children) > 0:
-        denominator = sum([math.exp(child.prior) for child in node.children])
+        maxPrior = max(child.prior for child in node.children)
+        denominator = sum([math.exp(child.prior - maxPrior) for child in node.children])
         for child in node.children:
-            child.prior = math.exp(child.prior)/denominator
+            child.prior = math.exp(child.prior - maxPrior)/denominator
 
 
 def perform_search(game_states, num_iterations, temperature, exploration, network, base_root=None):
