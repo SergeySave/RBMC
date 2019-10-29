@@ -98,7 +98,7 @@ def perform_search(game_states, num_iterations, temperature, exploration, networ
     power = 1.0 / temperature
     probs = {}
     for child in root.children:
-        p = child.visits ** power
+        p = child.visits ** power + child.prior
         prob_sum += p
         probs[child] = p
     return {(node.action, node): prob/prob_sum for (node, prob) in probs.items()}

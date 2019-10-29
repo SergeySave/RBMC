@@ -52,6 +52,8 @@ class MyAgent(Player):
         self.initialBoard = None
         self.noPreviousMoves = True
         self.region_selector = heuristic_scan3x3_loc
+        self.belief_zero_count = 0
+        self.turns = 0
         #self.heursitic = material_heuristic
         #self.move_selector = lambda x: heuristic_move_selector(x, self.heursitic, self.iterations,
         #                                                       self.temperature, self.exploration)
@@ -197,14 +199,18 @@ class MyAgent(Player):
         :example: choice = chess.Move(chess.G7, chess.G8, promotion=chess.KNIGHT) *default is Queen
         """
         print(str(seconds_left) + " seconds left, belief size: " + str(len(self.belief)))
-        if len(self.belief) < 50:
-            self.iterations = 400
-        elif len(self.belief) < 250:
-            self.iterations = 200
-        elif len(self.belief) < 500:
-            self.iterations = 100
-        else:
-            self.iterations = 50
+        if len(self.belief) == 1:
+            self.belief_zero_count += 1
+        self.turns += 1
+        self.iterations = max(1, int(800/len(self.belief)))
+        #if len(self.belief) < 25:
+        #    self.iterations = 400
+        #elif len(self.belief) < 50:
+        #    self.iterations = 200
+        #elif len(self.belief) < 100:
+        #    self.iterations = 100
+        #else:
+        #    self.iterations = 50
         move_prob_sums = sum((Counter({n[0]: p*c for n, p in
                                            perform_search([s], self.iterations, self.temperature, self.exploration, self.network, None).items()})
                                   for s, c in self.belief.items() if c > 1), Counter())
@@ -251,3 +257,4 @@ class MyAgent(Player):
         :param win_reason: String -- the reason for the game ending
         """
         print("End of game")
+        print(self.belief_zero_count/self.turns)
