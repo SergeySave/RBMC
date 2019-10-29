@@ -2,7 +2,7 @@
 # Self-Play Variables
 GAMES_PER_ITER = 25  # AGZ paper = 25000
 EVAL_PER_MOVE = 800  # Number of NN evals per move from AZ paper
-TEMPERATURE = 0.02  # TODO: Change temperature to do the thing from AGZ pg 24 Self-Play
+TEMPERATURE = 0.5  # TODO: Change temperature to do the thing from AGZ pg 24 Self-Play
 EXPLORATION = 1.4142135624
 
 # Training/Optimization Variables

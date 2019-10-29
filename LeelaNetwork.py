@@ -14,7 +14,10 @@ class LeelaNetwork:
             self.x: np.array([convert_states(states)]),
             "Training:0": False
         })
-        return p,(v[0, 0] + 0.5 * v[0, 1])
+        max_value = np.max(v[0])
+        exps = np.exp(v[0] - max_value)
+        softmaxed = exps/np.sum(exps)
+        return p,(softmaxed[0] + 0.5 * softmaxed[1])
 
     def get_move_index(self, move):
         return policy_map[move.uci()]

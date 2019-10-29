@@ -13,7 +13,7 @@ import argparse
 import random
 import chess
 
-from human_agent import Human
+from my_agent import MyAgent
 from player import load_player
 from game import Game
 from datetime import datetime
@@ -289,7 +289,7 @@ def play():
 
 
 if __name__ == '__main__':
-    player = Human()
+    player = MyAgent()
     basic_res = requests.get("https://rbc.jhuapl.edu/play/white/2")
     http_text = basic_res.text
     username = (re.search(r'.*username = "(.*)";.*', http_text).group(1))
