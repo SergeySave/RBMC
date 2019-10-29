@@ -235,10 +235,9 @@ def play():
                                          'Authorization': 'Basic ' + base64.b64encode(
                                              (username + ":" + password).encode("utf-8")).decode("utf-8"),
                                      }).json()["sense_actions"]
-        possible_sense = list(chess.SQUARES)
 
         # TODO: figure out possible_moves
-        sense = player.choose_sense(possible_sense, [], 500)
+        sense = player.choose_sense(sense_actions, [], 500)  # We do not use possible moves here
         sense_result = requests.post("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/sense",
                           json={
                               "square": sense,
@@ -249,28 +248,28 @@ def play():
                           }).json()["sense_result"]
         # TODO: handle results
         print(sense_result)
+        player.handle_sense_result([(sense_val[0], chess.Piece.from_symbol(sense_val[1]["value"]) if sense_val[1] is not None else None) for sense_val in sense_result])
 
+        # This request is made because the webpage makes it
         move_actions = requests.get("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/move_actions",
                                      headers={
                                          'Content-Type': 'application/json',
                                          'Authorization': 'Basic ' + base64.b64encode(
                                              (username + ":" + password).encode("utf-8")).decode("utf-8"),
                                      }).json()["move_actions"]
-        print(move_actions)
-        move = player.choose_move([], 500)
+        move = player.choose_move([], 500)  # We do not use possible moves here either
         move_result = requests.post("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/move",
-                                     json={
-                                         "requested_move": {
-                                             "type": "Move",
-                                             "value": move.uci()
-                                         },
-                                     },
+                                     data=("{\"requested_move\":{\"type\":\"Move\",\"value\":\"" + move.uci() + "\"}}").encode("utf-8"),
                                      headers={
                                          'Content-Type': 'application/json',
                                          'Authorization': 'Basic ' + base64.b64encode(
                                              (username + ":" + password).encode("utf-8")).decode("utf-8"),
                                      }).json()["move_result"]
         print(move_result)
+        player.handle_move_result(chess.Move.from_uci(move_result[0]["value"]),
+                                  chess.Move.from_uci(move_result[1]["value"]) if move_result[1] is not None else None,
+                                  move_result[2] is not None,
+                                  move_result[2])
         requests.post("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/end_turn",
                      json={},
                      headers={
@@ -295,7 +294,7 @@ if __name__ == '__main__':
     username = (re.search(r'.*username = "(.*)";.*', http_text).group(1))
     password =(re.search(r'.*password = "(.*)";.*', http_text).group(1))
     opponent = (re.search(r'.*opponent = "(.*)";.*', http_text).group(1))
-    color = (re.search(r'.*color = (.*);.*', http_text).group(1))
+    color = (re.search(r'.*color = (.*);.*', http_text).group(1)) == "true"
     registration = requests.post("https://rbc.jhuapl.edu/api/users",
                                   json={
                                       "username": username,
@@ -333,6 +332,8 @@ if __name__ == '__main__':
                               'Authorization': 'Basic ' + base64.b64encode((username + ":" + password).encode("utf-8")).decode("utf-8"),
                           }).json()
     play()
+
+    print("https://rbc.jhuapl.edu/games/" + str(game_id))
 else:
     parser = argparse.ArgumentParser(description='Allows you to play against an online bot.')
     parser.add_argument('local_path', help='Path to bot source file.')
