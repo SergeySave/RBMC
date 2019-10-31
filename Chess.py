@@ -38,11 +38,12 @@ class Chess:
 
     # Assumes that the move is legal
     def apply_move_did_capture(self, move):
-        capture = self.board.piece_at(move.to_square) is not None
         if move is None:
             self.board.push(chess.Move.null())
+            capture = False
         else:
             self.board.push(move)
+            capture = self.board.piece_at(move.to_square) is not None
         self.currentPlayer = 3 - self.currentPlayer
         if capture:
             self.no_capture_ply = 0

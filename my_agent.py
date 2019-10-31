@@ -25,6 +25,13 @@ from Turn import generate_next_states_probs
 from StateGeneratorNormal import generate_states_from_priors_pre_move, update_prior_beliefs
 from Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all
 from Turn import generate_states_from_priors
+from ChessMonteCarloTreeSearch import *
+from LeelaNetwork import LeelaNetwork
+from net import Net
+import tfprocess
+import yaml
+import chess
+import tensorflow as tf
 
 
 # TODO: Rename this class to what you would like your bot to be named during the game.
@@ -35,8 +42,8 @@ class MyAgent(Player):
         self.belief_states = []
         self.info = []
         self.exploration = 1.4142135624
-        self.temperature = 1.0
-        self.iterations = 1000
+        self.temperature = 0.05
+        self.iterations = 800
         self.now_fraction = 6 / 10
         self.retries = 10
         self.belief_size = 7500
@@ -45,9 +52,33 @@ class MyAgent(Player):
         self.initialBoard = None
         self.noPreviousMoves = True
         self.region_selector = heuristic_scan3x3_loc
-        self.heursitic = material_heuristic
-        self.move_selector = lambda x: heuristic_move_selector(x, self.heursitic, self.iterations,
-                                                               self.temperature, self.exploration)
+        self.belief_zero_count = 0
+        self.turns = 0
+        #self.heursitic = material_heuristic
+        #self.move_selector = lambda x: heuristic_move_selector(x, self.heursitic, self.iterations,
+        #                                                       self.temperature, self.exploration)
+        with open("leela_config.yml", "rb") as file:
+            cfg = yaml.safe_load(file.read())
+
+        net = Net()
+        # net.parse_proto("weights_run1_42700.pb.gz")  # 2019-07-02 15:13:26 +00:00
+        net.parse_proto("weights_run3_42872.pb.gz")  # 2019-09-09 03:25:41 +00:00
+
+        filters, blocks = net.filters(), net.blocks()
+        weights = net.get_weights()
+
+        x = [
+            tf.placeholder(tf.float32, [None, 112, 8 * 8]),
+            tf.placeholder(tf.float32, [None, 1858]),
+            tf.placeholder(tf.float32, [None, 3]),
+            tf.placeholder(tf.float32, [None, 3]),
+        ]
+
+        tfp = tfprocess.TFProcess(cfg)
+        tfp.init_net(x)
+        tfp.replace_weights(weights)
+
+        self.network = LeelaNetwork(tfp, x[0])
         self.prev_prop = False
 
     def handle_game_start(self, color, board):
@@ -64,8 +95,7 @@ class MyAgent(Player):
         self.belief_states.append(self.belief)
         if color == chess.BLACK:
             self.noPreviousMoves = False
-            from Turn import material_heuristic
-            self.heursitic = lambda x: 1 - material_heuristic(x)
+            #from Turn import material_heuristic
 
     def handle_opponent_move_result(self, captured_piece, captured_square):
         """
@@ -169,15 +199,22 @@ class MyAgent(Player):
         :example: choice = chess.Move(chess.G7, chess.G8, promotion=chess.KNIGHT) *default is Queen
         """
         print(str(seconds_left) + " seconds left, belief size: " + str(len(self.belief)))
-        if len(self.belief) < 50:
-            self.iterations = 500
-        elif len(self.belief) < 250:
-            self.iterations = 250
-        elif len(self.belief) < 500:
-            self.iterations = 100
-        else:
-            self.iterations = 50
-        return self.move_selector(self.belief)
+        if len(self.belief) == 1:
+            self.belief_zero_count += 1
+        self.turns += 1
+        self.iterations = max(1, int(800/len(self.belief)))
+        #if len(self.belief) < 25:
+        #    self.iterations = 400
+        #elif len(self.belief) < 50:
+        #    self.iterations = 200
+        #elif len(self.belief) < 100:
+        #    self.iterations = 100
+        #else:
+        #    self.iterations = 50
+        move_prob_sums = sum((Counter({n[0]: p*c for n, p in
+                                           perform_search([s], self.iterations, self.temperature, self.exploration, self.network, None).items()})
+                                  for s, c in self.belief.items() if c > 1), Counter())
+        return pick_action(move_prob_sums)
         
     def handle_move_result(self, requested_move, taken_move, captured_piece, captured_square, reason):
         """
@@ -220,3 +257,4 @@ class MyAgent(Player):
         :param win_reason: String -- the reason for the game ending
         """
         print("End of game")
+        print(self.belief_zero_count/self.turns)

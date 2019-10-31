@@ -13,7 +13,7 @@ import argparse
 import random
 import chess
 
-from human_agent import Human
+from my_agent import MyAgent
 from player import load_player
 from game import Game
 from datetime import datetime
@@ -205,7 +205,7 @@ def wait_for_turn():
                                         (username + ":" + password).encode("utf-8")).decode("utf-8"),
                                 }).json()["is_over"]
         if is_over:
-            raise Exception("Game Over")
+            return True
         else:
             is_my_turn = requests.get("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/is_my_turn",
                                        headers={
@@ -215,20 +215,23 @@ def wait_for_turn():
                                        }).json()["is_my_turn"]
             if is_my_turn:
                 done = True
+    return False
 
 
 def play():
+    player.handle_game_start(chess.WHITE if color else chess.BLACK, chess.Board())
     done = False
     while not done:
-        wait_for_turn()
+        if wait_for_turn():
+            break
         opponent_move_results = requests.get("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/opponent_move_results",
                                                 headers={
                                                     'Content-Type': 'application/json',
                                                     'Authorization': 'Basic ' + base64.b64encode(
                                                         (username + ":" + password).encode("utf-8")).decode("utf-8"),
                                                 }).json()["opponent_move_results"]
-        # TODO: handle results
-        print(opponent_move_results)
+        #print(opponent_move_results)
+        player.handle_opponent_move_result(opponent_move_results is not None, opponent_move_results)
         sense_actions = requests.get("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/sense_actions",
                                      headers={
                                          'Content-Type': 'application/json',
@@ -236,7 +239,6 @@ def play():
                                              (username + ":" + password).encode("utf-8")).decode("utf-8"),
                                      }).json()["sense_actions"]
 
-        # TODO: figure out possible_moves
         sense = player.choose_sense(sense_actions, [], 500)  # We do not use possible moves here
         sense_result = requests.post("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/sense",
                           json={
@@ -246,8 +248,7 @@ def play():
                               'Content-Type': 'application/json',
                               'Authorization': 'Basic ' + base64.b64encode((username + ":" + password).encode("utf-8")).decode("utf-8"),
                           }).json()["sense_result"]
-        # TODO: handle results
-        print(sense_result)
+        #print(sense_result)
         player.handle_sense_result([(sense_val[0], chess.Piece.from_symbol(sense_val[1]["value"]) if sense_val[1] is not None else None) for sense_val in sense_result])
 
         # This request is made because the webpage makes it
@@ -258,18 +259,18 @@ def play():
                                              (username + ":" + password).encode("utf-8")).decode("utf-8"),
                                      }).json()["move_actions"]
         move = player.choose_move([], 500)  # We do not use possible moves here either
-        move_result = requests.post("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/move",
-                                     data=("{\"requested_move\":{\"type\":\"Move\",\"value\":\"" + move.uci() + "\"}}").encode("utf-8"),
+        move_respns = requests.post("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/move",
+                                     data=("{\"requested_move\":{\"type\":\"Move\",\"value\":\"" + (move.uci() if move is not None else "null") + "\"}}").encode("utf-8"),
                                      headers={
                                          'Content-Type': 'application/json',
                                          'Authorization': 'Basic ' + base64.b64encode(
                                              (username + ":" + password).encode("utf-8")).decode("utf-8"),
-                                     }).json()["move_result"]
-        print(move_result)
-        player.handle_move_result(chess.Move.from_uci(move_result[0]["value"]),
-                                  chess.Move.from_uci(move_result[1]["value"]) if move_result[1] is not None else None,
+                                     })
+        move_result = move_respns.json()["move_result"]
+        player.handle_move_result(chess.Move.from_uci(move_result[0]["value"]) if move_result[0] is not None else chess.Move.null(),
+                                  chess.Move.from_uci(move_result[1]["value"]) if move_result[1] is not None else chess.Move.null(),
                                   move_result[2] is not None,
-                                  move_result[2])
+                                  move_result[2], "")
         requests.post("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/end_turn",
                      json={},
                      headers={
@@ -288,7 +289,7 @@ def play():
 
 
 if __name__ == '__main__':
-    player = Human()
+    player = MyAgent()
     basic_res = requests.get("https://rbc.jhuapl.edu/play/white/2")
     http_text = basic_res.text
     username = (re.search(r'.*username = "(.*)";.*', http_text).group(1))
@@ -332,6 +333,8 @@ if __name__ == '__main__':
                               'Authorization': 'Basic ' + base64.b64encode((username + ":" + password).encode("utf-8")).decode("utf-8"),
                           }).json()
     play()
+
+    player.handle_game_end(None, None)
 
     print("https://rbc.jhuapl.edu/games/" + str(game_id))
 else:
