@@ -75,6 +75,12 @@ class LegalMove(Information):
         return (self.move is None) or (self.move in state.board.legal_moves)
 
 
+class GameNotOver(Information):
+
+    def consistent_with(self, state, action):
+        return state.board.king(True) is not None and state.board.king(False) is not None
+
+
 class NothingInSix(Information):
     def consistent_with(self, s, action):
         return s.gettype(chess.A6) + s.gettype(chess.B6) + s.gettype(chess.C6) + s.gettype(chess.D6) + \

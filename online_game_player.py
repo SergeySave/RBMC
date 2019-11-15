@@ -21,6 +21,7 @@ import time
 import requests
 import re
 import base64
+from rhc_jhuapl_replay import get_replay
 
 
 def play_game(white_player, black_player, player_names):
@@ -239,7 +240,13 @@ def play():
                                              (username + ":" + password).encode("utf-8")).decode("utf-8"),
                                      }).json()["sense_actions"]
 
-        sense = player.choose_sense(sense_actions, [], 500)  # We do not use possible moves here
+        seconds_left = requests.get("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/seconds_left",
+                                     headers={
+                                         'Content-Type': 'application/json',
+                                         'Authorization': 'Basic ' + base64.b64encode(
+                                             (username + ":" + password).encode("utf-8")).decode("utf-8"),
+                                     }).json()["seconds_left"]
+        sense = player.choose_sense(sense_actions, [], seconds_left)  # We do not use possible moves here
         sense_result = requests.post("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/sense",
                           json={
                               "square": sense,
@@ -258,9 +265,16 @@ def play():
                                          'Authorization': 'Basic ' + base64.b64encode(
                                              (username + ":" + password).encode("utf-8")).decode("utf-8"),
                                      }).json()["move_actions"]
-        move = player.choose_move([], 500)  # We do not use possible moves here either
+        seconds_left = requests.get("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/seconds_left",
+                                     headers={
+                                         'Content-Type': 'application/json',
+                                         'Authorization': 'Basic ' + base64.b64encode(
+                                             (username + ":" + password).encode("utf-8")).decode("utf-8"),
+                                     }).json()["seconds_left"]
+        move = player.choose_move([], float(seconds_left))  # We do not use possible moves here either
+        data_str = "{\"requested_move\":{\"type\":\"Move\",\"value\":" + ("\"" + move.uci() + "\"" if move is not None else "null") + "}}"
         move_respns = requests.post("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/move",
-                                     data=("{\"requested_move\":{\"type\":\"Move\",\"value\":\"" + (move.uci() if move is not None else "null") + "\"}}").encode("utf-8"),
+                                     data=data_str.encode("utf-8"),
                                      headers={
                                          'Content-Type': 'application/json',
                                          'Authorization': 'Basic ' + base64.b64encode(
@@ -290,7 +304,7 @@ def play():
 
 if __name__ == '__main__':
     player = MyAgent()
-    basic_res = requests.get("https://rbc.jhuapl.edu/play/white/2")
+    basic_res = requests.get("https://rbc.jhuapl.edu/play/white/4")
     http_text = basic_res.text
     username = (re.search(r'.*username = "(.*)";.*', http_text).group(1))
     password =(re.search(r'.*password = "(.*)";.*', http_text).group(1))
@@ -334,9 +348,17 @@ if __name__ == '__main__':
                           }).json()
     play()
 
-    player.handle_game_end(None, None)
+    # If this is true, white won
+    winner_color = requests.get("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/winner_color",
+                                     headers={
+                                         'Content-Type': 'application/json',
+                                         'Authorization': 'Basic ' + base64.b64encode(
+                                             (username + ":" + password).encode("utf-8")).decode("utf-8"),
+                                     }).json()["winner_color"]
 
     print("https://rbc.jhuapl.edu/games/" + str(game_id))
+    print(winner_color)
+    player.handle_game_end(get_replay(game_id, 'white'))
 else:
     parser = argparse.ArgumentParser(description='Allows you to play against an online bot.')
     parser.add_argument('local_path', help='Path to bot source file.')

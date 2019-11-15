@@ -23,7 +23,7 @@ from Information import SomethingMovedTo
 from Information import ViewportInformation
 from Turn import generate_next_states_probs
 from StateGeneratorNormal import generate_states_from_priors_pre_move, update_prior_beliefs
-from Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all
+from Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all, GameNotOver
 from Turn import generate_states_from_priors
 from ChessMonteCarloTreeSearch import *
 from LeelaNetwork import LeelaNetwork
@@ -198,11 +198,26 @@ class MyAgent(Player):
         :condition: If you intend to move a pawn for promotion other than Queen, please specify the promotion parameter
         :example: choice = chess.Move(chess.G7, chess.G8, promotion=chess.KNIGHT) *default is Queen
         """
-        print(str(seconds_left) + " seconds left, belief size: " + str(len(self.belief)))
+        #print(str(seconds_left) + " seconds left, belief size: " + str(len(self.belief)))'
+        total_iters = 800
+        beliefs = 7500
+        if seconds_left < 250:
+            total_iters = 200
+            beliefs = 4000
+        elif seconds_left < 500:
+            total_iters = 300
+            beliefs = 4500
+        elif seconds_left < 750:
+            total_iters = 400
+            beliefs = 5500
+        elif seconds_left < 1000:
+            total_iters = 600
+            beliefs = 6500
+        self.belief_size = beliefs
         if len(self.belief) == 1:
             self.belief_zero_count += 1
         self.turns += 1
-        self.iterations = max(1, int(800/len(self.belief)))
+        self.iterations = max(1, int(total_iters/len(self.belief)))
         #if len(self.belief) < 25:
         #    self.iterations = 400
         #elif len(self.belief) < 50:
@@ -236,6 +251,7 @@ class MyAgent(Player):
             if captured_piece:  # If we captured an opponent piece we now know a bit more
                 added_beliefs.append(PiecePresentAt(captured_square))
             self.info[-1].extend(added_beliefs)
+            #self.info[-1].append(GameNotOver())
             self.belief = Counter({state.clone().applymove(taken_move): amount for state, amount in self.belief.items()
                                    if consistent_with_all(state, None, added_beliefs)})
         else:
@@ -249,12 +265,21 @@ class MyAgent(Player):
                                                    max_attempts=self.retries)
         self.belief_states.append(self.belief)
         
-    def handle_game_end(self, winner_color, win_reason):  # possible GameHistory object...
+    def handle_game_end(self, game_history):  # possible GameHistory object...
         """
         This function is called at the end of the game to declare a winner.
 
-        :param winner_color: Chess.BLACK/chess.WHITE -- the winning color
-        :param win_reason: String -- the reason for the game ending
+        :param game_history: 
         """
-        print("End of game")
-        print(self.belief_zero_count/self.turns)
+        for i in range(len(game_history)):
+            boards = Counter({state.board.fen(): c for state, c in self.belief_states[i].items()})
+            correct_count = boards[game_history[i]]
+            #print(game_history[i].board.fullmove_number)
+            #print(boards)
+            #print(game_history[i])
+            #print(correct_count)
+            total_count = sum(boards.values())
+            #print(total_count)
+            #print(boards.most_common(1)[0][0].board.fullmove_number)
+            print(correct_count/total_count)
+            #print("-----")
