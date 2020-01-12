@@ -1,5 +1,6 @@
 proto/**
 results/**
+errors/**
 .idea/*
 __pycache__/*
 venv/*

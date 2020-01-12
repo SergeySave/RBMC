@@ -32,6 +32,7 @@ import tfprocess
 import yaml
 import chess
 import tensorflow as tf
+from multiprocessing import Pool
 
 
 # TODO: Rename this class to what you would like your bot to be named during the game.
@@ -44,9 +45,9 @@ class MyAgent(Player):
         self.exploration = 1.4142135624
         self.temperature = 0.05
         self.iterations = 800
-        self.now_fraction = 6 / 10
+        self.now_fraction = 5.5 / 10
         self.retries = 10
-        self.belief_size = 7500
+        self.belief_size = 10000
         self.belief = Counter()
         self.color = None
         self.initialBoard = None
@@ -61,7 +62,7 @@ class MyAgent(Player):
             cfg = yaml.safe_load(file.read())
 
         net = Net()
-        # net.parse_proto("weights_run1_42700.pb.gz")  # 2019-07-02 15:13:26 +00:00
+        #net.parse_proto("weights_run1_42700.pb.gz")  # 2019-07-02 15:13:26 +00:00
         net.parse_proto("weights_run3_42872.pb.gz")  # 2019-09-09 03:25:41 +00:00
 
         filters, blocks = net.filters(), net.blocks()
@@ -171,9 +172,9 @@ class MyAgent(Player):
                     (Counter(d) for d in (generate_next_states_probs(state, amount, self.info[-1]) for state, amount in
                                           self.belief.items())), Counter())
 
-            if int(self.belief_size / 2) - sum(self.belief.values()) > 0:
+            if int(self.belief_size) - sum(self.belief.values()) > 0:
                 state_gens = generate_states_from_priors_pre_move(self.belief_states, self.info, self.now_fraction,
-                                                                  int(self.belief_size / 2) - sum(self.belief.values()),
+                                                                  self.belief_size - sum(self.belief.values()),
                                                                   len(self.belief_states) - 1,
                                                                   len(self.info) - 1,
                                                                   max_attempts=self.retries)
@@ -184,6 +185,9 @@ class MyAgent(Player):
             # self.belief += generate_states_from_priors_pre_move(self.belief_states, self.info, self.now_fraction,
             #                                                     self.belief_size - sum(self.belief.values()),
             #                                                     max_attempts=self.retries)
+
+    def process_item(self, s, c):
+        return Counter({n[0]: p*c for n, p in perform_search([s], self.iterations, self.temperature, self.exploration, self.network, None).items()})
 
     def choose_move(self, possible_moves, seconds_left):
         """
@@ -213,23 +217,24 @@ class MyAgent(Player):
         elif seconds_left < 1000:
             total_iters = 600
             beliefs = 6500
-        self.belief_size = beliefs
-        if len(self.belief) == 1:
-            self.belief_zero_count += 1
+        #self.belief_size = beliefs
         self.turns += 1
         self.iterations = max(1, int(total_iters/len(self.belief)))
-        #if len(self.belief) < 25:
-        #    self.iterations = 400
-        #elif len(self.belief) < 50:
-        #    self.iterations = 200
-        #elif len(self.belief) < 100:
-        #    self.iterations = 100
-        #else:
-        #    self.iterations = 50
-        move_prob_sums = sum((Counter({n[0]: p*c for n, p in
-                                           perform_search([s], self.iterations, self.temperature, self.exploration, self.network, None).items()})
-                                  for s, c in self.belief.items() if c > 1), Counter())
-        return pick_action(move_prob_sums)
+
+        #with Pool() as p:
+        #mapped = p.map(process_item, 
+        #    #mapped = p.map(process_item, [(s, c) for s, c in self.belief.items() if c > 1])
+        #    mapped = [p.apply(self.process_item, args=(s, c)) for s, c in self.belief.items() if c > 1]
+
+        mapped = (self.process_item(s, c) for s, c in self.belief.items() if c > 1)
+        move_prob_sums = sum(mapped, Counter())
+            
+        scale = sum(move_prob_sums.values())
+
+        #move_prob_sums = sum((Counter({n[0]: p*c for n, p in
+        #                                   perform_search([s], self.iterations, self.temperature, self.exploration, self.network, None).items()})
+        #                          for s, c in self.belief.items() if c > 1), Counter())
+        return pick_action(move_prob_sums, scale)
         
     def handle_move_result(self, requested_move, taken_move, captured_piece, captured_square, reason):
         """
@@ -247,13 +252,13 @@ class MyAgent(Player):
             if requested_move != taken_move:  # The requested move was illegal
                 added_beliefs.append(IllegalMove(requested_move))
             # The move that was taken is always legal
-                added_beliefs.append(LegalMove(taken_move))
+            added_beliefs.append(LegalMove(taken_move))
             if captured_piece:  # If we captured an opponent piece we now know a bit more
                 added_beliefs.append(PiecePresentAt(captured_square))
             self.info[-1].extend(added_beliefs)
             #self.info[-1].append(GameNotOver())
             self.belief = Counter({state.clone().applymove(taken_move): amount for state, amount in self.belief.items()
-                                   if consistent_with_all(state, None, added_beliefs)})
+                                   if consistent_with_all(state, taken_move, added_beliefs)})
         else:
             self.noPreviousMoves = False
             self.belief = Counter({g.clone().applymove(taken_move): c for g, c in self.belief.items()})
@@ -281,5 +286,6 @@ class MyAgent(Player):
             total_count = sum(boards.values())
             #print(total_count)
             #print(boards.most_common(1)[0][0].board.fullmove_number)
-            print(correct_count/total_count)
+            print(correct_count/max(total_count, 1))
             #print("-----")
+

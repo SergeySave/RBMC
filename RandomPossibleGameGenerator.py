@@ -54,13 +54,19 @@ from Information import *
 
 
 def generate_next_states(game, counter, info_list):
-    # pick legal moves randomly
-    # apply them
-    # ngen is the next game generator
-    ngen = ((game.clone().applymove(move), c, move) for move, c in
-            Counter(random.choices(game.getallmoves(), k=counter)).items())
+    # get the set of next possible games
+    # pick the right number of moves
+    next_games = [new_game for (new_game, move) in ((game.clone().applymove(move), move) for move in game.getallmoves()) if consistent_with_all(new_game, move, info_list)]
+    if len(next_games) == 0:
+        return Counter()
+    return Counter(random.choices(next_games, k=counter))
+
+    #ngen = ((game.clone().applymove(move), c, move) for move, c in
+    #        Counter(random.choices(game.getallmoves(), k=counter)).items())
+    #ngen = list(ngen)
+    #print(ngen)
     # for each of those next games make sure it is consistent with the information we have available for this move
-    return {new_game: c for new_game, c, move in ngen if consistent_with_all(new_game, move, info_list)}
+    #return {new_game: c for new_game, c, move in ngen if consistent_with_all(new_game, move, info_list)}
 
 
 # TODO: Implement some way to account for the opponent failing to move/skipping a turn

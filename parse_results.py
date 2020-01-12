@@ -1,6 +1,7 @@
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
+from collections import Counter
 
 def parse_file(path):
     with open(path) as f:
@@ -25,8 +26,8 @@ def create_knowledge_data(entries):
 
 if __name__ == "__main__":
     parsed = [parse_file(path) for path in glob.glob("results/*.txt")]
-    err_count = sum(1 for i in parsed if len(i) == 0)
-    not_erred = [i for i in parsed if len(i) != 0]
+    err_count = sum(1 for i in parsed if len(i) <= 1)
+    not_erred = [i for i in parsed if len(i) > 1]
     win_count = sum(1 for i in not_erred if i[1] == "True")
     loss_count = sum(1 for i in not_erred if i[1] == "False")
 
@@ -38,13 +39,13 @@ if __name__ == "__main__":
 
     loss_plot = plt.bar([0], loss_count, bar_width)
     win_plot = plt.bar([0], win_count, bar_width, bottom=loss_count)
-    err_plot = plt.bar([0], err_count, bar_width, bottom=(loss_count+win_count))
+    #err_plot = plt.bar([0], err_count, bar_width, bottom=(loss_count+win_count))
 
     plt.ylabel("Number of Games")
     plt.title("Games by Outcome and Opponent")
-    plt.xticks([0], ['Oracle'])
-    plt.yticks(np.arange(0, len(parsed), 50))
-    plt.legend([loss_plot[0], win_plot[0], err_plot[0]], ['Losses', 'Wins', 'Errors'])
+    plt.xticks([0], ['Random'])
+    plt.yticks(np.arange(0, loss_count + win_count, 50))
+    plt.legend([loss_plot[0], win_plot[0]], ['Losses', 'Wins'])
 
     plt.show()
 
@@ -65,3 +66,22 @@ if __name__ == "__main__":
     plt.xlabel("Rounds")
 
     plt.show()
+
+    errs = ["\n".join(parse_file(path)[25:]) for path in glob.glob("errors/*.txt")]
+    errCounter = Counter()
+    for err in errs:
+        x = err
+        if "self.iterations = max(1, int(total_iters/len(self.belief)))" in err:
+            x = "Lost belief"
+        elif "socket.gaierror: [Errno -2] Name or service not known" in err:
+            x = "Connection Error - Name or service not known"
+        elif "OSError: [Errno 101] Network is unreachable" in err:
+            x = "Connection Error - Network Unreachable"
+        elif "" == err:
+            x = "No Error"
+        errCounter[x] += 1    
+    errComm = errCounter.most_common()
+    for a in errComm:
+        print(" - " + a[0])
+        print("    = " + str(a[1]))
+    #print(errCounter)

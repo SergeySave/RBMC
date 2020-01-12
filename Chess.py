@@ -7,8 +7,8 @@ TYPES = ['k', 'q', 'r', 'b', 'n', 'p', ' ', 'P', 'N', 'B', 'R', 'Q', 'K']
 
 # Moves are encoded the same way as they  are in the AlphaGoZero paper
 class Chess:
-    def __init__(self):
-        self.board = chess.Board()
+    def __init__(self, b=chess.Board()):
+        self.board = b
         self.currentPlayer = 1
         self.no_capture_ply = 0
 

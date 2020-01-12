@@ -104,8 +104,8 @@ def perform_search(game_states, num_iterations, temperature, exploration, networ
     return {(node.action, node): prob/prob_sum for (node, prob) in probs.items()}
 
 
-def pick_action(move_probs):
-    rand = random.random()
+def pick_action(move_probs, scale=1.0):
+    rand = random.random()*scale
     total = 0.0
     for (move, prob) in move_probs.items():
         total += prob

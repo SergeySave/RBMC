@@ -33,6 +33,7 @@ def generate_states_from_priors_pre_move(previous_beliefs, info_list, fraction, 
                      (generate_next_states(state, amount, opponent_info) for state, amount in priors.items())),
                     Counter())
         attempts += 1
+
     if len(nows) == 0:
         return Counter()
     return Counter(random.choices(list(nows.keys()), weights=list(nows.values()), k=n_total))
@@ -49,7 +50,7 @@ def generate_states_from_priors(previous_beliefs, info_list, fraction, n_total, 
     my_move = info_list[info_index]
     nows = generate_states_from_priors_pre_move(previous_beliefs, info_list, fraction, n_total, belief_index, info_index - 1, max_attempts)
     if my_move is not None:
-        nows = Counter({g.applymove(my_move): c for g, c in nows.items()})
+        nows = Counter({g.clone().applymove(my_move): c for g, c in nows.items()})
     return nows
 
 
