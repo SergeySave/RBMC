@@ -81,6 +81,7 @@ class MyAgent(Player):
 
         self.network = LeelaNetwork(tfp, x[0])
         self.prev_prop = False
+        self.random_mode = False
 
     def handle_game_start(self, color, board):
         """
@@ -105,7 +106,7 @@ class MyAgent(Player):
         :param captured_piece: bool - true if your opponents captured your piece with their last move
         :param captured_square: chess.Square - position where your piece was captured
         """
-        if not self.noPreviousMoves:
+        if not self.noPreviousMoves and not self.random_mode:
             opponent_move = [SomethingMovedTo(captured_square)] if captured_piece else []
             self.info.append(opponent_move)
 
@@ -137,6 +138,8 @@ class MyAgent(Player):
         if self.noPreviousMoves:
             return possible_sense[0] # Don't care as the result will not have any effect
         else:
+            if self.random_mode:
+                return random.choice(possible_sense)
             # Select a region
             region_location = self.region_selector(self.belief)
             # Return the square at the center of this region
@@ -157,7 +160,7 @@ class MyAgent(Player):
             (A6, None), (B6, None), (C8, None)
         ]
         """
-        if not self.noPreviousMoves:
+        if not self.noPreviousMoves and not self.random_mode:
             # Add the information to our information list
             scan_viewport_info = ViewportInformation(dict(sense_result))
             self.info[-1].append(scan_viewport_info)
@@ -202,6 +205,9 @@ class MyAgent(Player):
         :condition: If you intend to move a pawn for promotion other than Queen, please specify the promotion parameter
         :example: choice = chess.Move(chess.G7, chess.G8, promotion=chess.KNIGHT) *default is Queen
         """
+        if self.random_mode or len(self.belief) == 0:
+            self.random_mode = True
+            return random.choice(possible_moves)
         #print(str(seconds_left) + " seconds left, belief size: " + str(len(self.belief)))'
         total_iters = 800
         beliefs = 7500
@@ -247,27 +253,28 @@ class MyAgent(Player):
         :param captured_piece: bool - true if you captured your opponents piece
         :param captured_square: chess.Square - position where you captured the piece
         """
-        if not self.noPreviousMoves:
-            added_beliefs = []
-            if requested_move != taken_move:  # The requested move was illegal
-                added_beliefs.append(IllegalMove(requested_move))
-            # The move that was taken is always legal
-            added_beliefs.append(LegalMove(taken_move))
-            if captured_piece:  # If we captured an opponent piece we now know a bit more
-                added_beliefs.append(PiecePresentAt(captured_square))
-            self.info[-1].extend(added_beliefs)
-            #self.info[-1].append(GameNotOver())
-            self.belief = Counter({state.clone().applymove(taken_move): amount for state, amount in self.belief.items()
-                                   if consistent_with_all(state, taken_move, added_beliefs)})
-        else:
-            self.noPreviousMoves = False
-            self.belief = Counter({g.clone().applymove(taken_move): c for g, c in self.belief.items()})
-        self.info.append(taken_move)
-        self.belief += generate_states_from_priors(self.belief_states, self.info, self.now_fraction,
-                                                   self.belief_size - sum(self.belief.values()),
-                                                   len(self.belief_states) - 1,
-                                                   len(self.info) - 1,
-                                                   max_attempts=self.retries)
+        if not self.random_mode:
+            if not self.noPreviousMoves:
+                added_beliefs = []
+                if requested_move != taken_move:  # The requested move was illegal
+                    added_beliefs.append(IllegalMove(requested_move))
+                # The move that was taken is always legal
+                added_beliefs.append(LegalMove(taken_move))
+                if captured_piece:  # If we captured an opponent piece we now know a bit more
+                    added_beliefs.append(PiecePresentAt(captured_square))
+                self.info[-1].extend(added_beliefs)
+                #self.info[-1].append(GameNotOver())
+                self.belief = Counter({state.clone().applymove(taken_move): amount for state, amount in self.belief.items()
+                                       if consistent_with_all(state, taken_move, added_beliefs)})
+            else:
+                self.noPreviousMoves = False
+                self.belief = Counter({g.clone().applymove(taken_move): c for g, c in self.belief.items()})
+            self.info.append(taken_move)
+            self.belief += generate_states_from_priors(self.belief_states, self.info, self.now_fraction,
+                                                       self.belief_size - sum(self.belief.values()),
+                                                       len(self.belief_states) - 1,
+                                                       len(self.info) - 1,
+                                                       max_attempts=self.retries)
         self.belief_states.append(self.belief)
         
     def handle_game_end(self, game_history):  # possible GameHistory object...

@@ -97,13 +97,14 @@ def play():
                                          'Authorization': 'Basic ' + base64.b64encode(
                                              (username + ":" + password).encode("utf-8")).decode("utf-8"),
                                      }).json()["move_actions"]
+        possible_moves = [chess.Move.from_uci(m["value"]) for m in move_actions]
         seconds_left = requests.get("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/seconds_left",
                                      headers={
                                          'Content-Type': 'application/json',
                                          'Authorization': 'Basic ' + base64.b64encode(
                                              (username + ":" + password).encode("utf-8")).decode("utf-8"),
                                      }).json()["seconds_left"]
-        move = player.choose_move([], float(seconds_left))  # We do not use possible moves here either
+        move = player.choose_move(possible_moves, float(seconds_left))  # We do not use possible moves here either
         data_str = "{\"requested_move\":" + (("{\"type\":\"Move\",\"value\":" + "\"" + move.uci() + "\"" + "}") if move is not None and move != move.null() else "null") + "}"
 
         move_respns = requests.post("https://rbc.jhuapl.edu/api/games/" + str(game_id) + "/move",
@@ -137,7 +138,7 @@ def play():
 
 if __name__ == '__main__':
     player = MyAgent()
-    basic_res = requests.get("https://rbc.jhuapl.edu/play/white/4")
+    basic_res = requests.get("https://rbc.jhuapl.edu/play/white/3")
     http_text = basic_res.text
     username = (re.search(r'.*username = "(.*)";.*', http_text).group(1))
     password =(re.search(r'.*password = "(.*)";.*', http_text).group(1))

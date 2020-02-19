@@ -39,13 +39,13 @@ if __name__ == "__main__":
 
     loss_plot = plt.bar([0], loss_count, bar_width)
     win_plot = plt.bar([0], win_count, bar_width, bottom=loss_count)
-    #err_plot = plt.bar([0], err_count, bar_width, bottom=(loss_count+win_count))
+    err_plot = plt.bar([0], err_count, bar_width, bottom=(loss_count+win_count))
 
     plt.ylabel("Number of Games")
     plt.title("Games by Outcome and Opponent")
-    plt.xticks([0], ['Random'])
-    plt.yticks(np.arange(0, loss_count + win_count, 50))
-    plt.legend([loss_plot[0], win_plot[0]], ['Losses', 'Wins'])
+    plt.xticks([0], ['Trout'])
+    plt.yticks(np.arange(0, loss_count + win_count + err_count, 50))
+    plt.legend([loss_plot[0], win_plot[0], err_plot], ['Losses', 'Wins', 'Errors'])
 
     plt.show()
 
@@ -77,6 +77,12 @@ if __name__ == "__main__":
             x = "Connection Error - Name or service not known"
         elif "OSError: [Errno 101] Network is unreachable" in err:
             x = "Connection Error - Network Unreachable"
+        elif "KeyboardInterrupt" in err:
+            x = "Keyboard Interrupt"
+        elif "Connection aborted.', TimeoutError" in err:
+            x = "Connection Error - TimeoutError"
+        elif "JSONDecodeError" in err:
+            x = "JSONDecodeError"
         elif "" == err:
             x = "No Error"
         errCounter[x] += 1    
