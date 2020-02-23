@@ -9,3 +9,4 @@ env/
 input/
 leelalogs/
 stockfish
+rbmc/__pycache__/*

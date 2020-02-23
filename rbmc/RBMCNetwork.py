@@ -105,8 +105,9 @@ def load_network(file_name):
 def convert_states(states):
     input_planes = np.empty((N, N, M*T*B + L))
 
-    current_board = states[-1].most_common(1)[0].board
-    if states[-1].currentPlayer == 2:
+    current_state = states[-1].most_common(1)[0][0]
+    current_board = current_state.board
+    if current_state.currentPlayer == 2:
         current_board = current_board.mirror()
 
     # no_progress = get_current_repetition_count(current_board)
@@ -119,14 +120,14 @@ def convert_states(states):
             bestBeliefs = states[-i].most_common(B)
             total = sum(x[1] for x in bestBeliefs)
             for j in range(B):
-                input_planes[:, :, (-L - M*(i*B + B + j)):(-L - M*(i*B + j))] = get_piece_planes(bestBeliefs[j][0].board, bestBeliefs[j][0].currentPlayer == 2, bestBeliefs[j][1]/total) if j < len(bestBeliefs) else 0
+                input_planes[:, :, (-L - M*(i*B + 1 + j)):(-L - M*(i*B + j))] = get_piece_planes(bestBeliefs[j][0].board, bestBeliefs[j][0].currentPlayer == 2, bestBeliefs[j][1]/total) if j < len(bestBeliefs) else 0
         else:
             # Before the game started: empty planes
             input_planes[:, :, (-L - B*M*(i + 1)):(-L - B*M*i)] = 0
 
     # Player 1 = 0, Player 2 = 1
-    input_planes[:, :, -7] = np.repeat(states[-1].currentPlayer - 1, N*N).reshape((N, N))  # Player color
-    input_planes[:, :, -6] = np.repeat(states[-1].board.fullmove_number, N*N).reshape((N, N))  # Total move count
+    input_planes[:, :, -7] = np.repeat(current_state.currentPlayer - 1, N*N).reshape((N, N))  # Player color
+    input_planes[:, :, -6] = np.repeat(current_state.board.fullmove_number, N*N).reshape((N, N))  # Total move count
     input_planes[:, :, -5] = np.repeat(int(bool(castling & chess.BB_A1)), N*N).reshape((N, N))  # Player 1 castling
     input_planes[:, :, -4] = np.repeat(int(bool(castling & chess.BB_A8)), N*N).reshape((N, N))  # Player 8 castling
     input_planes[:, :, -3] = np.repeat(int(bool(castling & chess.BB_H1)), N*N).reshape((N, N))  # Opponent 1 castling

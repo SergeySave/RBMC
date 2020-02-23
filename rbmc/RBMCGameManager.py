@@ -15,7 +15,6 @@ class GameManager:
     def __init__(self, total_num_games, verbose=False):
         self.current_game = 0
         self.verbose = verbose
-        self.exporter = chess.pgn.StringExporter(headers=False, comments=False, variations=False)
 
     def update_state(self, write=None):
         if write is None:
@@ -32,17 +31,17 @@ class GameManager:
         games = len(moves)
         start_game = self.current_game
         next_game = (start_game + games) % GAME_KEEP_NUM
-        print("Saving game starting at " + str(start_game) + " until " + next_game)
+        print("Saving game starting at " + str(start_game) + " until " + str(next_game))
         self.update_state(next_game)
         for i in range(games):
             move_probs = moves[i]
             scan_probs = scans[i]
             with open("output/rbmcgame/" + str((start_game + i) % GAME_KEEP_NUM) + ".json", 'w') as file:
                 json.dump({
-                    "beliefs": [{chess.pgn.Game.from_board(b.board).accept(self.exporter): c for b, c in states[j].items()} for j in range(i)],
+                    "beliefs": [{chess.pgn.Game.from_board(b.board).accept(chess.pgn.StringExporter(headers=False, comments=False, variations=False)): c for b, c in states[j].items()} for j in range(i+1)],
                     "move_probs": {m.uci(): p for m, p in move_probs.items()},
                     "result": result,
-                    "scan_probs": {t: p for t, p in scan_probs.items()},
+                    "scan_probs": {i: scan_probs[i].astype(float) for i in range(len(scan_probs))},
                     "team": team
                 }, file, indent=4)
 

@@ -1,7 +1,7 @@
 from rbmc.RBMCGameManager import *
 from rbmc.RBMCNetworkManager import *
 from rbmc.RBMCagent import *
-
+from game import Game
 
 def play_turn(game, player, turn, move_number):
     possible_moves = game.get_moves()
@@ -23,8 +23,8 @@ def play_turn(game, player, turn, move_number):
 
 def generate_game(white_network, black_network, iterations, temperature, exploration, printing=False):
 
-    white_player = RBMCagent(white_network)
-    black_player = RBMCagent(black_network)
+    white_player = RBMCAgent(white_network)
+    black_player = RBMCAgent(black_network)
 
     players = [black_player, white_player]
 
@@ -36,15 +36,15 @@ def generate_game(white_network, black_network, iterations, temperature, explora
 
     move_number = 1
     while not game.is_over():
-        requested_move, taken_move = play_turn(game, players[game.turn], move_number)
+        requested_move, taken_move = play_turn(game, players[game.turn], game.turn, move_number)
         move_number += 1
 
     winner_color, winner_reason = game.get_winner()
 
     result_value = 1.0 if winner_color == chess.WHITE else (0.0 if winner_color == chess.BLACK else 0.5)
 
-    white_data = white_player.handle_game_end(winner_color, winner_reason)
-    black_data = black_player.handle_game_end(winner_color, winner_reason)
+    white_data = white_player.handle_game_end()
+    black_data = black_player.handle_game_end()
 
     return white_data, black_data, result_value
 
@@ -53,11 +53,11 @@ def generate_self_play_games(network, num_games, num_iterations, temperature, ex
     for i in range(num_games):
         white_data, black_data, result = generate_game(network, network, num_iterations, temperature, exploration,
                                               printing=verbose)
-        game_mangr.save_game(white_data[0], white_data[1], white_data[2], white_data[3], 1) # Save White Things
-        game_mangr.save_game(black_data[0], black_data[1], black_data[2], black_data[3], 2) # Save Black Things
+        game_mangr.save_game(white_data[0], white_data[1], result, white_data[2], 1) # Save White Things
+        game_mangr.save_game(black_data[0], black_data[1], 1-result, black_data[2], 2) # Save Black Things
 
 
-if __name__ == "__main__":
+def main():
     network_manager = NetworkManager(True)
     game_manager = GameManager(GAME_KEEP_NUM, True)
     while True:

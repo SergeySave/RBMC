@@ -14,7 +14,7 @@ class Chess:
 
     def clone(self):
         clone = Chess()
-        clone.board = self.board.copy(stack=False)
+        clone.board = self.board.copy(stack=True)
         clone.currentPlayer = self.currentPlayer
         clone.no_capture_ply = self.no_capture_ply
         return clone

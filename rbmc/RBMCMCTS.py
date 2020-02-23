@@ -1,6 +1,7 @@
 import math
 import random
-from Network import mirror_move
+from rbmc.RBMCNetwork import mirror_move
+from collections import Counter
 
 class Node:
     def __init__(self, state, action, prior, parent):
@@ -20,7 +21,7 @@ class Node:
         if self.parent is not None:
             self.player = 3 - parent.player
         else:
-            self.player = state.most_common(1)[0].currentPlayer
+            self.player = state.most_common(1)[0][0].currentPlayer
         self.value = 0.0  # NN evaluation of the current.txt state V(state)
 
     def mirror(self):
@@ -46,7 +47,7 @@ def expand_and_eval(node, states, network):
 
     all_possible_moves = set()
     for game, c in states[-1].items():
-        all_possible_moves = all_possible_moves | game.getallmoves()
+        all_possible_moves = all_possible_moves | set(game.getallmoves())
 
     node.children = [Node(smart_apply_move(base_state, move, node.player), move if node.player == 1 else mirror_move(move),
                           get_prob_for_move(move, probs[0], network), node) for move in all_possible_moves if move is not None]
@@ -61,7 +62,7 @@ def expand_and_eval(node, states, network):
 def perform_search(game_states, num_iterations, temperature, exploration, network, base_root=None):
     # root node (no action taken to get there, 100% prior probability, no parent)
     if base_root is None:
-        root = Node(game_states, None, 1.0, None)
+        root = Node(game_states[-1], None, 1.0, None)
     else:
         root = base_root
         root.parent = None
@@ -79,7 +80,7 @@ def perform_search(game_states, num_iterations, temperature, exploration, networ
             # Descend down the tree
             node = move_node
             # state.applymove(move_node.move)
-            states.append(move_node.state.clone())
+            states.append(move_node.state)
 
         expand_and_eval(node, states, network)
         value = node.value

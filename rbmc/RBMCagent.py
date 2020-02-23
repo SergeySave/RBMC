@@ -22,6 +22,7 @@ from StateGeneratorNormal import generate_states_from_priors_pre_move, update_pr
 from Turn import generate_next_states_probs
 from Turn import generate_states_from_priors
 from rbmc.RBMCConstants import *
+from rbmc.RBMCMCTS import *
 
 
 class RBMCAgent:
@@ -92,7 +93,7 @@ class RBMCAgent:
         :return: chess.SQUARE -- the center of 3x3 section of the board you want to sense
         :example: choice = chess.A1
         """
-        scan_probs = self.network.evaluate(self.belief_states)[2]
+        scan_probs = self.network.evaluate(self.belief_states)[2][0]
 
         maxPrior = max(p for p in scan_probs)
         denominator = np.sum(np.exp(scan_probs - maxPrior))
@@ -105,6 +106,7 @@ class RBMCAgent:
         rand = random.random()
         total = 0.0
         result = None
+
         for i in range(len(scan_probs)):
             total += scan_probs[i]
             if rand <= total:
@@ -166,9 +168,9 @@ class RBMCAgent:
             return random.choice(possible_moves)
 
         move_probs = perform_search(self.belief_states, EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
-        self.moves.append(move_probs)
+        self.moves.append({x[0]: p for x, p in move_probs.items()})
 
-        return pick_action(move_probs)
+        return pick_action(move_probs)[0]
         
     def handle_move_result(self, requested_move, taken_move, captured_piece, captured_square, reason):
         """
