@@ -23,6 +23,7 @@ from Turn import generate_next_states_probs
 from Turn import generate_states_from_priors
 from rbmc.RBMCConstants import *
 from rbmc.RBMCMCTS import *
+from rbmc.RBMCNetwork import mirror_move
 
 
 class RBMCAgent:
@@ -170,7 +171,7 @@ class RBMCAgent:
         move_probs = perform_search(self.belief_states, EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
         self.moves.append({x[0]: p for x, p in move_probs.items()})
 
-        return pick_action(move_probs)[0]
+        return pick_action(move_probs)[0] if self.color else mirror_move(pick_action(move_probs)[0])
         
     def handle_move_result(self, requested_move, taken_move, captured_piece, captured_square, reason):
         """

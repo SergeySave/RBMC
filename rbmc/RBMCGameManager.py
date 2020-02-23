@@ -58,8 +58,8 @@ class GameManager:
                 game = json.load(file)
                 states = [Counter({chess.pgn.read_game(pgn) for pgn, c in b.items()}) for b in game["beliefs"]]
                 inputs.append(convert_states(states))
-                move_outs.append(convert_move_probs({chess.Move.from_uci(uci): p for uci, p in game["move_probs"].items()}, game["team"] == 2))
+                move_outs.append(convert_move_probs({chess.Move.from_uci(uci): p for uci, p in game["move_probs"].items()}, False))
                 result_outs.append(game["result"])
-                scan_outs.append({(t if game["team"] == 1 else chess.square_mirror(t)): p for t, p in game["scan_probs"].items()})
+                scan_outs.append({(t): p for t, p in game["scan_probs"].items()})
 
         return np.array(inputs), np.array(move_outs), np.array(result_outs), np.array(scan_outs)
