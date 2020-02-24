@@ -26,6 +26,9 @@ def generate_states_from_priors_pre_move(previous_beliefs, info_list, fraction, 
     if len(belief) > 0:
         priors += Counter(random.choices(list(belief.keys()), weights=list(belief.values()), k=n_now))
 
+    if info_index - 1 >= 0:
+        my_move = info_list[info_index - 1]
+        priors = Counter({g.clone().applymove(my_move): c for g, c in priors.items() if my_move in g.getallmoves()})
     nows = Counter()
     attempts = 0
     while attempts < max_attempts and sum(nows.values()) < n_total:

@@ -54,7 +54,6 @@ class RBMCAgent:
         self.color = color
         self.initialBoard = board
         self.belief = generate_possible_states(BELIEF_SIZE, [], max_attempts=1)
-        self.belief_states.append(self.belief)
         if color == chess.BLACK:
             self.noPreviousMoves = False
 
@@ -73,7 +72,6 @@ class RBMCAgent:
 
             if self.prev_prop:
                 # Propagate moves 1 step forward
-                from Turn import generate_states_from_priors_pre_move, generate_next_states_probs
                 self.belief = sum((Counter(d) for d in (generate_next_states_probs(state, amount, opponent_move)
                                                         for state, amount in self.belief.items())), Counter())
 
@@ -94,7 +92,11 @@ class RBMCAgent:
         :return: chess.SQUARE -- the center of 3x3 section of the board you want to sense
         :example: choice = chess.A1
         """
-        scan_probs = self.network.evaluate(self.belief_states)[2][0]
+        if self.noPreviousMoves:
+            scan = random.choice(range(36))
+            self.scans.append(np.ones(36) / 36)
+            return chess.square(scan % 6 + 1, scan // 6 + 1)
+        scan_probs = self.network.evaluate(self.belief_states + [self.belief])[2][0]
 
         maxPrior = max(p for p in scan_probs)
         denominator = np.sum(np.exp(scan_probs - maxPrior))
@@ -144,12 +146,11 @@ class RBMCAgent:
                                           self.belief.items())), Counter())
 
             if int(BELIEF_SIZE) - sum(self.belief.values()) > 0:
-                state_gens = generate_states_from_priors_pre_move(self.belief_states, self.info, NOW_FRACTION,
-                                                                  BELIEF_SIZE - sum(self.belief.values()),
-                                                                  len(self.belief_states) - 1,
-                                                                  len(self.info) - 1,
-                                                                  max_attempts=RETRIES)
-                self.belief += update_prior_beliefs(self.belief_states, state_gens, BELIEF_SIZE)
+                self.belief += generate_states_from_priors_pre_move(self.belief_states, self.info, NOW_FRACTION,
+                                                                    BELIEF_SIZE - sum(self.belief.values()),
+                                                                    len(self.belief_states) - 1,
+                                                                    len(self.info) - 1,
+                                                                    max_attempts=RETRIES)
 
     def choose_move(self, possible_moves, seconds_left):
         """
@@ -168,6 +169,7 @@ class RBMCAgent:
             self.random_mode = True
             return random.choice(possible_moves)
 
+        self.belief_states.append(self.belief)
         move_probs = perform_search(self.belief_states, EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
         self.moves.append({x[0]: p for x, p in move_probs.items()})
 
@@ -206,7 +208,6 @@ class RBMCAgent:
                                                        len(self.belief_states) - 1,
                                                        len(self.info) - 1,
                                                        max_attempts=RETRIES)
-        self.belief_states.append(self.belief)
         
     def handle_game_end(self):  # possible GameHistory object...
         """
@@ -214,5 +215,6 @@ class RBMCAgent:
 
         :param game_history: 
         """
+        self.belief_states.append(self.belief)
         return self.belief_states, self.moves, self.scans
 
