@@ -11,16 +11,13 @@ Source:         Adapted from recon-chess (https://pypi.org/project/reconchess/)
 
 import chess
 import numpy as np
-import random
-from collections import Counter
 
 from Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all
 from Information import SomethingMovedTo
 from Information import ViewportInformation
 from RandomPossibleGameGenerator import generate_possible_states
-from StateGeneratorNormal import generate_states_from_priors_pre_move, update_prior_beliefs
 from Turn import generate_next_states_probs
-from Turn import generate_states_from_priors
+from rbmc.RBMCBeliefGenerator import generate_states_from_priors_pre_move, generate_states_from_priors
 from rbmc.RBMCConstants import *
 from rbmc.RBMCMCTS import *
 from rbmc.RBMCNetwork import mirror_move

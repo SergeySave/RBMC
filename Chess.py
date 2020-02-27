@@ -9,8 +9,8 @@ TYPES = ['k', 'q', 'r', 'b', 'n', 'p', ' ', 'P', 'N', 'B', 'R', 'Q', 'K']
 class Chess:
     def __init__(self, b=chess.Board()):
         self.board = b
-        self.currentPlayer = 1
-        self.no_capture_ply = 0
+        self.currentPlayer = 1 if b.turn == chess.WHITE else 2
+        self.no_capture_ply = b.halfmove_clock
 
     def clone(self):
         clone = Chess()

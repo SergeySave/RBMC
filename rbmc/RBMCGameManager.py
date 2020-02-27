@@ -45,6 +45,23 @@ class GameManager:
                     "team": team
                 }, file, indent=4)
 
+    def read_game(self, path):
+        with open(path, 'r') as file:
+            game = json.load(file)
+
+            def play_out_game(pgn):
+                game = chess.pgn.read_game(io.StringIO(pgn))
+                board = game.board()
+                for move in game.mainline_moves():
+                    board.push(move)
+                return Chess(board)
+
+            states = [Counter({play_out_game(pgn): c for pgn, c in b.items()}) for b in game["beliefs"]]
+            return states,\
+                {chess.Move.from_uci(uci): p for uci, p in game["move_probs"].items()},\
+                game["result"],\
+                {t: p for t, p in game["scan_probs"].items()}
+
     def sample_moves(self, num_samples):
         self.update_state()
         inputs = []
@@ -54,12 +71,10 @@ class GameManager:
 
         sample = random.choices(glob.glob("output/rbmcgame/*.json"), k=num_samples)
         for path in sample:
-            with open(path, 'r') as file:
-                game = json.load(file)
-                states = [Counter({chess.pgn.read_game(pgn) for pgn, c in b.items()}) for b in game["beliefs"]]
-                inputs.append(convert_states(states))
-                move_outs.append(convert_move_probs({chess.Move.from_uci(uci): p for uci, p in game["move_probs"].items()}, False))
-                result_outs.append(game["result"])
-                scan_outs.append({(t): p for t, p in game["scan_probs"].items()})
+            i, m_o, r_o, s_o = self.read_game(path)
+            inputs.append(convert_states(i))
+            move_outs.append(convert_move_probs(m_o, False))
+            result_outs.append(r_o)
+            scan_outs.append(s_o)
 
         return np.array(inputs), np.array(move_outs), np.array(result_outs), np.array(scan_outs)
