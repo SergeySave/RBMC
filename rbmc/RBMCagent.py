@@ -17,7 +17,7 @@ from Information import SomethingMovedTo
 from Information import ViewportInformation
 from RandomPossibleGameGenerator import generate_possible_states
 from Turn import generate_next_states_probs
-from rbmc.RBMCBeliefGenerator import generate_states_from_priors_pre_move, generate_states_from_priors
+from StateGeneratorNormal import generate_states_from_priors_pre_move, generate_states_from_priors
 from rbmc.RBMCConstants import *
 from rbmc.RBMCMCTS import *
 from rbmc.RBMCNetwork import mirror_move
@@ -52,6 +52,7 @@ class RBMCAgent:
         self.color = color
         self.initialBoard = board
         self.belief = generate_possible_states(BELIEF_SIZE, [], max_attempts=1)
+        self.belief_states.append(self.belief)
         if color == chess.BLACK:
             self.noPreviousMoves = False
 
