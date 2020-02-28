@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 """
-File Name:      my_agent.py
+File Name:      RBMCagent.py
 Authors:        Sergey Savelyev
 Date:           4/1/19
 
-Description:    Python file for my agent.
+Description:    Python file for RBMC Agent.
 Source:         Adapted from recon-chess (https://pypi.org/project/reconchess/)
 """
 
@@ -27,6 +27,7 @@ class RBMCAgent:
 
     def __init__(self, network):
         self.belief_states = []
+        self.input_states = []
         self.info = []
         self.belief = Counter()
         self.color = None
@@ -166,8 +167,8 @@ class RBMCAgent:
             self.random_mode = True
             return random.choice(possible_moves)
 
-        self.belief_states.append(self.belief)
-        move_probs = perform_search(self.belief_states, EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
+        self.input_states.append(self.belief)
+        move_probs = perform_search(self.belief_states + [self.belief], EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
         self.moves.append({x[0]: p for x, p in move_probs.items()})
 
         return pick_action(move_probs)[0] if self.color else mirror_move(pick_action(move_probs)[0])
@@ -205,6 +206,7 @@ class RBMCAgent:
                                                        len(self.belief_states) - 1,
                                                        len(self.info) - 1,
                                                        max_attempts=RETRIES)
+        self.belief_states.append(self.belief)
         
     def handle_game_end(self):  # possible GameHistory object...
         """
@@ -212,6 +214,6 @@ class RBMCAgent:
 
         :param game_history: 
         """
-        self.belief_states.append(self.belief)
-        return self.belief_states, self.moves, self.scans
+        self.input_states.append(self.belief)
+        return self.input_states, self.moves, self.scans
 
