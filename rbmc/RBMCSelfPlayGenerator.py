@@ -1,7 +1,7 @@
 from rbmc.RBMCGameManager import *
 from rbmc.RBMCNetworkManager import *
 from rbmc.RBMCagent import *
-from game import Game
+from rbmc.game import Game
 
 def play_turn(game, player, turn, move_number):
     possible_moves = game.get_moves()
