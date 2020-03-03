@@ -31,6 +31,8 @@ class Game:
         self.is_finished = False
 
         self.move_result = None
+
+        self.num_black_moves = 0
         
     def start(self):
         """
@@ -229,6 +231,7 @@ class Game:
         else:
             self.black_board.set_fen(self._without_opponent_pieces(self.truth_board, self.turn).fen())
             self.white_board.set_fen(self._without_opponent_pieces(self.truth_board, not self.turn).fen())
+            self.num_black_moves += 1
         
         # store captured_square to notify other player
         self.move_result = captured_square
@@ -294,7 +297,7 @@ class Game:
             return True
 
         king_captured = self.truth_board.king(chess.WHITE) is None or self.truth_board.king(chess.BLACK) is None
-        return king_captured
+        return king_captured or self.num_black_moves == 100
         
     def get_winner(self):
         """
@@ -309,3 +312,5 @@ class Game:
             return chess.BLACK, "BLACK won by king capture."
         elif self.truth_board.king(chess.BLACK) is None:
             return chess.WHITE, "WHITE won by king capture."
+        elif self.num_black_moves == 100:
+            return None, "Tied due to move limit"
