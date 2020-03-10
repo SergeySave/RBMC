@@ -203,9 +203,9 @@ def get_piece_planes(board, mirror, board_prob):
                 piece = state[rank * N + file]
                 if piece.isalpha():
                     result[rank][file][fen_order.find(piece)] = 1
-    result[:, :, 12] = 1 if board.is_repetition(1) else 0
-    result[:, :, 13] = 1 if board.is_repetition(2) else 0
-    result[:, :, 14] = board_prob
+    # result[:, :, 12] = 1 if board.is_repetition(1) else 0
+    # result[:, :, 13] = 1 if board.is_repetition(2) else 0
+    result[:, :, 12] = board_prob
 
     return result
 

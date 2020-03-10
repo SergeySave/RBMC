@@ -22,7 +22,7 @@ GAME_KEEP_NUM = 500000  # How many games should it keep
 # Neural Network Variables
 N = 8
 T = 8
-M = 6*2 + 2 + 1 # 6 for piece for each of 2 sides, 2 for repetitions, 1 for probability
+M = 6*2 + 1  # 6 for piece for each of 2 sides, 1 for probability
 B = 100
 L = 7
 RESIDUAL_BLOCKS = 19  # This is not counting the starting block

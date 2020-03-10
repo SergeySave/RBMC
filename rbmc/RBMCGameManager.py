@@ -38,7 +38,7 @@ class GameManager:
             scan_probs = scans[i]
             with open("output/rbmcgame/" + str((start_game + i) % GAME_KEEP_NUM) + ".json", 'w') as file:
                 json.dump({
-                    "beliefs": [{chess.pgn.Game.from_board(b.board).accept(chess.pgn.StringExporter(headers=False, comments=False, variations=False)): c for b, c in states[j].items()} for j in range(i+1)],
+                    "beliefs": [{b.board.fen(): c for b, c in states[j].items()} for j in range(i+1)],
                     "move_probs": {m.uci(): p for m, p in move_probs.items()},
                     "result": result,
                     "scan_probs": {i: scan_probs[i].astype(float) for i in range(len(scan_probs))},
@@ -49,14 +49,10 @@ class GameManager:
         with open(path, 'r') as file:
             game = json.load(file)
 
-            def play_out_game(pgn):
-                game = chess.pgn.read_game(io.StringIO(pgn))
-                board = game.board()
-                for move in game.mainline_moves():
-                    board.push(move)
-                return Chess(board)
+            def play_out_game(fen):
+                return Chess(chess.Board(fen))
 
-            states = [Counter({play_out_game(pgn): c for pgn, c in b.items()}) for b in game["beliefs"]]
+            states = [Counter({play_out_game(fen): c for fen, c in b.items()}) for b in game["beliefs"]]
             return states,\
                 {chess.Move.from_uci(uci): p for uci, p in game["move_probs"].items()},\
                 game["result"],\
@@ -75,6 +71,6 @@ class GameManager:
             inputs.append(convert_states(i))
             move_outs.append(convert_move_probs(m_o, False))
             result_outs.append(r_o)
-            scan_outs.append(s_o)
+            scan_outs.append(np.array([s_o[str(i)] for i in range(36)]))
 
         return np.array(inputs), np.array(move_outs), np.array(result_outs), np.array(scan_outs)
