@@ -89,7 +89,7 @@ class NothingInSix(Information):
 
 class MovedKnight(Information):
     def consistent_with(self, s, action):
-        return s.gettype(action.to_square) == chess.KNIGHT
+        return action is not None and s.gettype(action.to_square) == chess.KNIGHT
 
 
 class BlackMissingPawn(Information):

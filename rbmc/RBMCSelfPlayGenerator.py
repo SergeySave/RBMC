@@ -3,6 +3,7 @@ from rbmc.RBMCNetworkManager import *
 from rbmc.RBMCagent import *
 from rbmc.game import Game
 
+
 def play_turn(game, player, turn, move_number):
     possible_moves = game.get_moves()
     possible_sense = list(chess.SQUARES)
@@ -20,6 +21,7 @@ def play_turn(game, player, turn, move_number):
 
     game.end_turn()
     return requested_move, taken_move
+
 
 def generate_game(white_network, black_network, iterations, temperature, exploration, printing=False):
 
@@ -52,7 +54,7 @@ def generate_game(white_network, black_network, iterations, temperature, explora
 def generate_self_play_games(network, num_games, num_iterations, temperature, exploration, game_mangr, verbose=False):
     for i in range(num_games):
         white_data, black_data, result = generate_game(network, network, num_iterations, temperature, exploration,
-                                              printing=verbose)
+                                                       printing=verbose)
         game_mangr.save_game(white_data[0], white_data[1], result, white_data[2], 1) # Save White Things
         game_mangr.save_game(black_data[0], black_data[1], 1-result, black_data[2], 2) # Save Black Things
 

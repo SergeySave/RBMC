@@ -3,6 +3,12 @@ from Chess import Chess
 import math
 from RandomPossibleGameGenerator import generate_next_states
 import random
+from multiprocessing import Pool
+
+
+def mp_single_attempt(inp):
+    state, amount, opponent_info = inp
+    return generate_next_states(state, amount, opponent_info)
 
 
 # last element in previous_beliefs is the belief we started with before our scan
@@ -28,11 +34,11 @@ def generate_states_from_priors_pre_move(previous_beliefs, info_list, fraction, 
 
     nows = Counter()
     attempts = 0
-    while attempts < max_attempts and sum(nows.values()) < n_total:
-        nows += sum((Counter(d) for d in
-                     (generate_next_states(state, amount, opponent_info) for state, amount in priors.items())),
-                    Counter())
-        attempts += 1
+    with Pool() as pool:
+        while attempts < max_attempts and sum(nows.values()) < n_total:
+            nows += sum(pool.map(mp_single_attempt, ((state, amount, opponent_info) for
+                                                     state, amount in priors.items())), Counter())
+            attempts += 1
 
     if len(nows) == 0:
         return Counter()

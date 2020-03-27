@@ -47,9 +47,9 @@
 #
 
 
-from Chess import Chess
 import random
 from collections import Counter
+from Chess import Chess
 from Information import *
 
 
@@ -61,15 +61,7 @@ def generate_next_states(game, counter, info_list):
         return Counter()
     return Counter(random.choices(next_games, k=counter))
 
-    #ngen = ((game.clone().applymove(move), c, move) for move, c in
-    #        Counter(random.choices(game.getallmoves(), k=counter)).items())
-    #ngen = list(ngen)
-    #print(ngen)
-    # for each of those next games make sure it is consistent with the information we have available for this move
-    #return {new_game: c for new_game, c, move in ngen if consistent_with_all(new_game, move, info_list)}
 
-
-# TODO: Implement some way to account for the opponent failing to move/skipping a turn
 def generate_possible_states(n, information, max_attempts=5):
     if n == 0:
         return Counter()
