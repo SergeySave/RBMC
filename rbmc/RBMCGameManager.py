@@ -9,6 +9,7 @@ import numpy as np
 from rbmc.RBMCConstants import *
 import glob
 from collections import Counter
+import pickle
 
 class GameManager:
 
@@ -36,18 +37,18 @@ class GameManager:
         for i in range(games):
             move_probs = moves[i]
             scan_probs = scans[i]
-            with open("output/rbmcgame/" + str((start_game + i) % GAME_KEEP_NUM) + ".json", 'w') as file:
-                json.dump({
-                    "beliefs": [{b.board.fen(): c for b, c in states[j].items()} for j in range(i+1)],
+            with open("output/rbmcgame/" + str((start_game + i) % GAME_KEEP_NUM) + ".rbmcgame", 'wb') as file:
+                pickle.dump({
+                    "beliefs": [({b.board.fen(): c for b, c in states[j].items()} if i + 1 - j < 8 else {}) for j in range(i+1)],
                     "move_probs": {m.uci(): p for m, p in move_probs.items()},
                     "result": result,
                     "scan_probs": {i: scan_probs[i].astype(float) for i in range(len(scan_probs))},
                     "team": team
-                }, file, indent=4)
+                }, file)
 
     def read_game(self, path):
-        with open(path, 'r') as file:
-            game = json.load(file)
+        with open(path, 'rb') as file:
+            game = pickle.load(file)
 
             def play_out_game(fen):
                 return Chess(chess.Board(fen))
@@ -65,12 +66,12 @@ class GameManager:
         result_outs = []
         scan_outs = []
 
-        sample = random.choices(glob.glob("output/rbmcgame/*.json"), k=num_samples)
+        sample = random.choices(glob.glob("output/rbmcgame/*.rbmcgame"), k=num_samples)
         for path in sample:
             i, m_o, r_o, s_o = self.read_game(path)
             inputs.append(convert_states(i))
             move_outs.append(convert_move_probs(m_o, False))
             result_outs.append(r_o)
-            scan_outs.append(np.array([s_o[str(i)] for i in range(36)]))
+            scan_outs.append(np.array([s_o[i] for i in range(36)]))
 
         return np.array(inputs), np.array(move_outs), np.array(result_outs), np.array(scan_outs)

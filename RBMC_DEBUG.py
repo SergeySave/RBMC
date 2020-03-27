@@ -1,9 +1,7 @@
-import chess
-import random
+from rbmc.RBMCGameManager import *
 
-game = chess.Board()
+gm = GameManager(10000)
 
-while len(list(game.legal_moves)) > 0:
-    print(game.fen())
-    game.push(random.choice(list(game.legal_moves)))
-print(game.fen())
+i, m, r, s = gm.sample_moves(10)
+
+print("asda")
