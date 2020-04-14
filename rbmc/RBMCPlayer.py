@@ -37,8 +37,6 @@ class RBMCPlayer(Player):
         self.turns = 0
         self.network = network
         self.prev_prop = None
-        self.scans = []
-        self.moves = []
         self.random_mode = False
 
     def handle_game_start(self, color, board, opponent_name):
@@ -93,7 +91,6 @@ class RBMCPlayer(Player):
         """
         if self.noPreviousMoves:
             scan = random.choice(range(36))
-            self.scans.append(np.ones(36) / 36)
             return chess.square(scan % 6 + 1, scan // 6 + 1)
         scan_probs = self.network.evaluate(self.belief_states + [self.belief])[2][0]
 
@@ -104,7 +101,6 @@ class RBMCPlayer(Player):
         power = 1.0 / SCAN_TEMPERATURE
         scan_probs = np.power(scan_probs, power)
         scan_probs = scan_probs / np.sum(scan_probs)
-        self.scans.append(scan_probs)
         rand = random.random()
         total = 0.0
         result = None
@@ -169,8 +165,7 @@ class RBMCPlayer(Player):
             return random.choice(possible_moves)
 
         self.belief_states.append(self.belief)
-        move_probs = perform_search(self.belief_states + [self.belief], EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
-        self.moves.append({x[0]: p for x, p in move_probs.items()})
+        move_probs = perform_search(self.belief_states, EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
 
         return pick_action(move_probs)[0] if self.color else mirror_move(pick_action(move_probs)[0])
 
@@ -207,6 +202,7 @@ class RBMCPlayer(Player):
                                                        len(self.belief_states) - 2,
                                                        len(self.info) - 1,
                                                        max_attempts=RETRIES)
+            self.belief_states[-1] = self.belief
 
     def handle_game_end(self, winner_color, win_reason, game_history):  # possible GameHistory object...
         """
