@@ -166,7 +166,9 @@ class RBMCPlayer:
         self.belief_states.append(self.belief)
         move_probs = perform_search(self.belief_states + [self.belief], EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
 
-        return pick_action(move_probs)[0] if self.color else mirror_move(pick_action(move_probs)[0])
+        print(move_probs)
+
+        return pick_action(move_probs)[0] if self.color == chess.WHITE else mirror_move(pick_action(move_probs)[0])
 
     def handle_move_result(self, requested_move, taken_move, captured_piece, captured_square):
         """
