@@ -12,6 +12,7 @@ Source:         Adapted from recon-chess (https://github.com/reconnaissanceblind
 import chess
 import numpy as np
 
+from reconchess import Player, Color, GameHistory, WinReason, Square
 from Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all
 from Information import SomethingMovedTo
 from Information import ViewportInformation
@@ -23,7 +24,7 @@ from rbmc.RBMCMCTS import *
 from rbmc.RBMCNetwork import mirror_move
 
 
-class RBMCPlayer:
+class RBMCPlayer(Player):
 
     def __init__(self, network):
         self.belief_states = []
@@ -36,6 +37,8 @@ class RBMCPlayer:
         self.turns = 0
         self.network = network
         self.prev_prop = None
+        self.scans = []
+        self.moves = []
         self.random_mode = False
 
     def handle_game_start(self, color, board, opponent_name):
@@ -90,6 +93,7 @@ class RBMCPlayer:
         """
         if self.noPreviousMoves:
             scan = random.choice(range(36))
+            self.scans.append(np.ones(36) / 36)
             return chess.square(scan % 6 + 1, scan // 6 + 1)
         scan_probs = self.network.evaluate(self.belief_states + [self.belief])[2][0]
 
@@ -100,6 +104,7 @@ class RBMCPlayer:
         power = 1.0 / SCAN_TEMPERATURE
         scan_probs = np.power(scan_probs, power)
         scan_probs = scan_probs / np.sum(scan_probs)
+        self.scans.append(scan_probs)
         rand = random.random()
         total = 0.0
         result = None
@@ -165,10 +170,9 @@ class RBMCPlayer:
 
         self.belief_states.append(self.belief)
         move_probs = perform_search(self.belief_states + [self.belief], EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
+        self.moves.append({x[0]: p for x, p in move_probs.items()})
 
-        print(move_probs)
-
-        return pick_action(move_probs)[0] if self.color == chess.WHITE else mirror_move(pick_action(move_probs)[0])
+        return pick_action(move_probs)[0] if self.color else mirror_move(pick_action(move_probs)[0])
 
     def handle_move_result(self, requested_move, taken_move, captured_piece, captured_square):
         """
