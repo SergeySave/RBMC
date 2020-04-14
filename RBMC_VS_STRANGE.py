@@ -14,7 +14,7 @@ def main():
 
     network = NetworkManager().load_recent_network()
 
-    our_agent = RBMCAgent(network)
+    our_agent = RBMCPlayer(network)
 
     try:
         winner_color, win_reason, history = play_local_game(
