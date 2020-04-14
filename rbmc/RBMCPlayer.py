@@ -90,7 +90,6 @@ class RBMCPlayer:
         """
         if self.noPreviousMoves:
             scan = random.choice(range(36))
-            self.scans.append(np.ones(36) / 36)
             return chess.square(scan % 6 + 1, scan // 6 + 1)
         scan_probs = self.network.evaluate(self.belief_states + [self.belief])[2][0]
 
