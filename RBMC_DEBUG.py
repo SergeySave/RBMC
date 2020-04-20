@@ -1,7 +1,3 @@
-from rbmc.RBMCGameManager import *
+import rbmc.RBMC_TRSPG as TRSPG
 
-gm = GameManager(10000)
-
-i, m, r, s = gm.sample_moves(10)
-
-print("asda")
+TRSPG.main()

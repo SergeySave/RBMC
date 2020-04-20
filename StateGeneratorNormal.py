@@ -55,8 +55,7 @@ def generate_states_from_priors(previous_beliefs, info_list, fraction, n_total, 
         return Counter({Chess(): n_total})
     my_move = info_list[info_index]
     nows = generate_states_from_priors_pre_move(previous_beliefs, info_list, fraction, n_total, belief_index, info_index - 1, max_attempts)
-    if my_move is not None:
-        nows = Counter({g.clone().applymove(my_move): c for g, c in nows.items()})
+    nows = Counter({g.clone().applymove(my_move): c for g, c in nows.items()})
     return nows
 
 

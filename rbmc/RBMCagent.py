@@ -26,7 +26,8 @@ from rbmc.RBMCNetwork import mirror_move
 class RBMCAgent:
 
     def __init__(self, network):
-        self.belief_states = []
+        self.input_beliefs = []
+        self.tracking_beliefs = []
         self.info = []
         self.belief = Counter()
         self.color = None
@@ -51,7 +52,7 @@ class RBMCAgent:
         self.color = color
         self.initialBoard = board
         self.belief = generate_possible_states(BELIEF_SIZE, [], max_attempts=1)
-        self.belief_states.append(self.belief)
+        self.tracking_beliefs.append(self.belief)
         if color == chess.BLACK:
             self.noPreviousMoves = False
 
@@ -73,9 +74,9 @@ class RBMCAgent:
                 self.belief = sum((Counter(d) for d in (generate_next_states_probs(state, amount, opponent_move)
                                                         for state, amount in self.belief.items())), Counter())
 
-                self.belief += generate_states_from_priors_pre_move(self.belief_states, self.info, NOW_FRACTION,
+                self.belief += generate_states_from_priors_pre_move(self.tracking_beliefs, self.info, NOW_FRACTION,
                                                                     BELIEF_SIZE - sum(self.belief.values()),
-                                                                    len(self.belief_states) - 1,
+                                                                    len(self.tracking_beliefs) - 1,
                                                                     len(self.info) - 1,
                                                                     max_attempts=RETRIES)
 
@@ -94,7 +95,7 @@ class RBMCAgent:
             scan = random.choice(range(36))
             self.scans.append(np.ones(36) / 36)
             return chess.square(scan % 6 + 1, scan // 6 + 1)
-        scan_probs = self.network.evaluate(self.belief_states + [self.belief])[2][0]
+        scan_probs = self.network.evaluate(self.input_beliefs + [self.belief])[2][0]
 
         maxPrior = max(p for p in scan_probs)
         denominator = np.sum(np.exp(scan_probs - maxPrior))
@@ -144,9 +145,9 @@ class RBMCAgent:
                                           self.belief.items())), Counter())
 
             if int(BELIEF_SIZE) - sum(self.belief.values()) > 0:
-                self.belief += generate_states_from_priors_pre_move(self.belief_states, self.info, NOW_FRACTION,
+                self.belief += generate_states_from_priors_pre_move(self.tracking_beliefs, self.info, NOW_FRACTION,
                                                                     BELIEF_SIZE - sum(self.belief.values()),
-                                                                    len(self.belief_states) - 1,
+                                                                    len(self.tracking_beliefs) - 1,
                                                                     len(self.info) - 1,
                                                                     max_attempts=RETRIES)
 
@@ -167,8 +168,8 @@ class RBMCAgent:
             self.random_mode = True
             return random.choice(possible_moves)
 
-        self.belief_states.append(self.belief)
-        move_probs = perform_search(self.belief_states + [self.belief], EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
+        self.input_beliefs.append(self.belief)
+        move_probs = perform_search(self.input_beliefs, EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
         self.moves.append({x[0]: p for x, p in move_probs.items()})
 
         return pick_action(move_probs)[0] if self.color else mirror_move(pick_action(move_probs)[0])
@@ -201,17 +202,18 @@ class RBMCAgent:
                 self.noPreviousMoves = False
                 self.belief = Counter({g.clone().applymove(taken_move): c for g, c in self.belief.items()})
             self.info.append(taken_move)
-            self.belief += generate_states_from_priors(self.belief_states, self.info, NOW_FRACTION,
+            self.belief += generate_states_from_priors(self.tracking_beliefs, self.info, NOW_FRACTION,
                                                        BELIEF_SIZE - sum(self.belief.values()),
-                                                       len(self.belief_states) - 2,
+                                                       len(self.tracking_beliefs) - 1,
                                                        len(self.info) - 1,
                                                        max_attempts=RETRIES)
-        
+        self.tracking_beliefs.append(self.belief)
+
     def handle_game_end(self):  # possible GameHistory object...
         """
         This function is called at the end of the game to declare a winner.
 
         :param game_history: 
         """
-        return self.belief_states, self.moves, self.scans
+        return self.input_beliefs, self.moves, self.scans
 

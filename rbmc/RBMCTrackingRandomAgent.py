@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 
 """
-File Name:      RBMCPlayer.py
+File Name:      RBMCTrackingRandomAgent.py
 Authors:        Sergey Savelyev
-Date:           4/14/20
+Date:           4/20/20
 
-Description:    Python file for RBMC Player.
-Source:         Adapted from recon-chess (https://github.com/reconnaissanceblindchess/reconchess/blob/master/reconchess/player.py)
+Description:    Python file for RBMC Tracking Random Agent.
+Source:         Adapted from recon-chess (https://pypi.org/project/reconchess/)
 """
 
 import chess
 import numpy as np
 
-from reconchess import Player, Color, GameHistory, WinReason, Square
 from Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all
 from Information import SomethingMovedTo
 from Information import ViewportInformation
@@ -24,9 +23,9 @@ from rbmc.RBMCMCTS import *
 from rbmc.RBMCNetwork import mirror_move
 
 
-class RBMCPlayer(Player):
+class RBMCTrackingRandomAgent:
 
-    def __init__(self, network):
+    def __init__(self):
         self.input_beliefs = []
         self.tracking_beliefs = []
         self.info = []
@@ -36,11 +35,12 @@ class RBMCPlayer(Player):
         self.noPreviousMoves = True
         self.belief_zero_count = 0
         self.turns = 0
-        self.network = network
         self.prev_prop = None
+        self.scans = []
+        self.moves = []
         self.random_mode = False
 
-    def handle_game_start(self, color, board, opponent_name):
+    def handle_game_start(self, color, board):
         """
         This function is called at the start of the game.
 
@@ -90,27 +90,9 @@ class RBMCPlayer(Player):
         :return: chess.SQUARE -- the center of 3x3 section of the board you want to sense
         :example: choice = chess.A1
         """
-        if self.noPreviousMoves:
-            scan = random.choice(range(36))
-            return chess.square(scan % 6 + 1, scan // 6 + 1)
-        scan_probs = self.network.evaluate(self.input_beliefs + [self.belief])[2][0]
-
-        maxPrior = max(p for p in scan_probs)
-        denominator = np.sum(np.exp(scan_probs - maxPrior))
-        scan_probs = scan_probs / denominator
-
-        power = 1.0 / SCAN_TEMPERATURE
-        scan_probs = np.power(scan_probs, power)
-        scan_probs = scan_probs / np.sum(scan_probs)
-        rand = random.random()
-        total = 0.0
-        result = None
-
-        for i in range(len(scan_probs)):
-            total += scan_probs[i]
-            if rand <= total:
-                result = i
-        return chess.square(result % 6 + 1, result // 6 + 1)
+        scan = random.choice(range(36))
+        self.scans.append(np.ones(36) / 36)
+        return chess.square(scan % 6 + 1, scan // 6 + 1)
 
     def handle_sense_result(self, sense_result):
         """
@@ -154,23 +136,19 @@ class RBMCPlayer(Player):
 
         :param possible_moves: List(chess.Moves) -- list of acceptable moves based only on pieces
         :param seconds_left: float -- seconds left to make a move
-
+        
         :return: chess.Move -- object that includes the square you're moving from to the square you're moving to
         :example: choice = chess.Move(chess.F2, chess.F4)
-
+        
         :condition: If you intend to move a pawn for promotion other than Queen, please specify the promotion parameter
         :example: choice = chess.Move(chess.G7, chess.G8, promotion=chess.KNIGHT) *default is Queen
         """
-        if self.random_mode or len(self.belief) == 0:
-            self.random_mode = True
-            return random.choice(possible_moves)
-
         self.input_beliefs.append(self.belief)
-        move_probs = perform_search(self.input_beliefs, EVAL_PER_MOVE, TEMPERATURE, EXPLORATION, self.network)
+        move = random.choice(possible_moves)
+        self.moves.append({move: 1})
+        return move
 
-        return pick_action(move_probs)[0] if self.color else mirror_move(pick_action(move_probs)[0])
-
-    def handle_move_result(self, requested_move, taken_move, captured_piece, captured_square):
+    def handle_move_result(self, requested_move, taken_move, captured_piece, captured_square, reason):
         """
         This is a function called at the end of your turn/after your move was made and gives you the chance to update
         your board.
@@ -205,10 +183,11 @@ class RBMCPlayer(Player):
                                                        max_attempts=RETRIES)
         self.tracking_beliefs.append(self.belief)
 
-    def handle_game_end(self, winner_color, win_reason, game_history):  # possible GameHistory object...
+    def handle_game_end(self):  # possible GameHistory object...
         """
         This function is called at the end of the game to declare a winner.
 
-        :param game_history:
+        :param game_history: 
         """
-        pass
+        return self.input_beliefs, self.moves, self.scans
+
