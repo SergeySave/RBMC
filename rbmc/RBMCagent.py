@@ -15,6 +15,7 @@ import numpy as np
 from Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all
 from Information import SomethingMovedTo
 from Information import ViewportInformation
+from Information import NothingCaptured
 from RandomPossibleGameGenerator import generate_possible_states
 from Turn import generate_next_states_probs
 from StateGeneratorNormal import generate_states_from_priors_pre_move, generate_states_from_priors
@@ -64,7 +65,7 @@ class RBMCAgent:
         :param captured_square: chess.Square - position where your piece was captured
         """
         if not self.noPreviousMoves and not self.random_mode:
-            opponent_move = [SomethingMovedTo(captured_square)] if captured_piece else []
+            opponent_move = [SomethingMovedTo(captured_square)] if captured_piece else [NothingCaptured()]
             self.info.append(opponent_move)
 
             self.prev_prop = len(self.belief) <= 5

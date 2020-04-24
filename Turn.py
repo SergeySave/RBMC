@@ -97,7 +97,7 @@ def generate_next_states_probs(game, counter, info_list):
     ngen = ((game.clone().applymove(move), c, move) for move, c in
             Counter(random.choices(list(prob_distr.keys()), weights=list(prob_distr.values()), k=counter)).items())
     # for each of those next games make sure it is consistent with the information we have available for this move
-    return {new_game: c for new_game, c, move in ngen if consistent_with_all(new_game, move, info_list)}
+    return {new_game: c for new_game, c, move in ngen if consistent_with_all(new_game, move, info_list, game)}
 
 
 # region_selector is a function from a list of previous possible board configurations to a ViewportInformation

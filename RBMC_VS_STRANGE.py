@@ -1,13 +1,16 @@
-import sys
-sys.path.insert(0, "../reconchess-strangefish/")
+# import sys
+# sys.path.insert(0, "../reconchess-strangefish/")
 
 import chess
 from reconchess import LocalGame, play_local_game
-from strangefish import StrangeFish
-from strangefish.strategies import multiprocessing_strategies
+# from strangefish import StrangeFish
+# from strangefish.strategies import multiprocessing_strategies
 
 from rbmc.RBMCNetworkManager import *
 from rbmc.RBMCPlayer import *
+
+from random_agent_2 import Random
+from datetime import datetime
 
 def main():
     game = LocalGame(seconds_per_player=1e10)
@@ -19,7 +22,8 @@ def main():
     try:
         winner_color, win_reason, history = play_local_game(
             our_agent,
-            StrangeFish(*multiprocessing_strategies.create_strategy()),
+            Random(),
+            # StrangeFish(*multiprocessing_strategies.create_strategy()),
             game=game
         )
 
@@ -36,7 +40,7 @@ def main():
 
     timestamp = datetime.now().strftime('%Y_%m_%d-%H_%M_%S')
 
-    replay_path = '{}-{}-{}-{}.json'.format(white_bot_name, black_bot_name, winner, timestamp)
+    replay_path = '{}-{}-{}-{}.json'.format("Our Bot", "Strangefish", winner, timestamp)
     print('Saving replay to {}...'.format(replay_path))
     history.save(replay_path)
 

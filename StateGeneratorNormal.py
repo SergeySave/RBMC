@@ -36,6 +36,7 @@ def generate_states_from_priors_pre_move(previous_beliefs, info_list, fraction, 
     attempts = 0
     with Pool() as pool:
         while attempts < max_attempts and sum(nows.values()) < n_total:
+            # nows += sum((mp_single_attempt((state, amount, opponent_info)) for state, amount in priors.items()), Counter())
             nows += sum(pool.map(mp_single_attempt, ((state, amount, opponent_info) for
                                                      state, amount in priors.items())), Counter())
             attempts += 1

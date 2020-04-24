@@ -1,11 +1,14 @@
 import chess
 
 
-def consistent_with_all(state, action, info_list):
-    return all(info.consistent_with(state, action) for info in info_list)
+def consistent_with_all(state, action, info_list, old_state=None):
+    return all(info.consistent_with_new(state, action, old_state) for info in info_list)
 
 
 class Information:
+    def consistent_with_new(self, state, action, old_state):
+        return self.consistent_with(state, action)
+
     def consistent_with(self, state, action):
         pass
 
@@ -44,6 +47,14 @@ class SomethingMovedTo(Information):
 
     def consistent_with(self, state, action):
         return action is not None and action.to_square == self.moved_to
+
+class NothingCaptured(Information):
+
+    def __init__(self):
+        pass
+
+    def consistent_with_new(self, state, action, old_state):
+        return old_state is not None and (action is None or old_state.board.piece_at(action.to_square) is None)
 
 
 class PiecePresentAt(Information):

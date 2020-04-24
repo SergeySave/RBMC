@@ -12,18 +12,21 @@ Source:         Adapted from recon-chess (https://pypi.org/project/reconchess/)
 import chess
 import numpy as np
 
+from reconchess import Player, Color, GameHistory, WinReason, Square
 from Information import LegalMove, IllegalMove, PiecePresentAt, consistent_with_all
 from Information import SomethingMovedTo
 from Information import ViewportInformation
+from Information import NothingCaptured
 from RandomPossibleGameGenerator import generate_possible_states
 from Turn import generate_next_states_probs
 from StateGeneratorNormal import generate_states_from_priors_pre_move, generate_states_from_priors
 from rbmc.RBMCConstants import *
-from rbmc.RBMCMCTS import *
-from rbmc.RBMCNetwork import mirror_move
+from collections import Counter
+import random
+# from rbmc.RBMCMCTS import *
 
 
-class RBMCTrackingRandomAgent:
+class RBMCTrackingRandomAgent(Player):
 
     def __init__(self):
         self.input_beliefs = []
@@ -40,7 +43,7 @@ class RBMCTrackingRandomAgent:
         self.moves = []
         self.random_mode = False
 
-    def handle_game_start(self, color, board):
+    def handle_game_start(self, color, board, opponent_name=None):
         """
         This function is called at the start of the game.
 
@@ -63,7 +66,7 @@ class RBMCTrackingRandomAgent:
         :param captured_square: chess.Square - position where your piece was captured
         """
         if not self.noPreviousMoves and not self.random_mode:
-            opponent_move = [SomethingMovedTo(captured_square)] if captured_piece else []
+            opponent_move = [SomethingMovedTo(captured_square)] if captured_piece else [NothingCaptured()]
             self.info.append(opponent_move)
 
             self.prev_prop = len(self.belief) <= 5
@@ -144,11 +147,19 @@ class RBMCTrackingRandomAgent:
         :example: choice = chess.Move(chess.G7, chess.G8, promotion=chess.KNIGHT) *default is Queen
         """
         self.input_beliefs.append(self.belief)
+        print(self.color)
+        all_possible_moves = set()
+        for game, c in self.belief.items():
+            all_possible_moves = all_possible_moves | set(game.getallmoves())
+        for m in all_possible_moves:
+            if m not in possible_moves:
+                print(m)
+        print()
         move = random.choice(possible_moves)
         self.moves.append({move: 1})
         return move
 
-    def handle_move_result(self, requested_move, taken_move, captured_piece, captured_square, reason):
+    def handle_move_result(self, requested_move, taken_move, captured_piece, captured_square, reason=None):
         """
         This is a function called at the end of your turn/after your move was made and gives you the chance to update
         your board.
@@ -183,7 +194,7 @@ class RBMCTrackingRandomAgent:
                                                        max_attempts=RETRIES)
         self.tracking_beliefs.append(self.belief)
 
-    def handle_game_end(self):  # possible GameHistory object...
+    def handle_game_end(self, winner_color, win_reason, game_history):  # possible GameHistory object...
         """
         This function is called at the end of the game to declare a winner.
 

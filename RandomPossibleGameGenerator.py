@@ -56,7 +56,7 @@ from Information import *
 def generate_next_states(game, counter, info_list):
     # get the set of next possible games
     # pick the right number of moves
-    next_games = [new_game for (new_game, move) in ((game.clone().applymove(move), move) for move in game.getallmoves()) if consistent_with_all(new_game, move, info_list)]
+    next_games = [new_game for (new_game, move) in ((game.clone().applymove(move), move) for move in game.getallmoves()) if consistent_with_all(new_game, move, info_list, game)]
     if len(next_games) == 0:
         return Counter()
     return Counter(random.choices(next_games, k=counter))
