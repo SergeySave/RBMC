@@ -1,6 +1,6 @@
 
 # Self-Play Variables
-GAMES_PER_ITER = 25  # AGZ paper = 25000
+GAMES_PER_ITER = 1  # AGZ paper = 25000
 EVAL_PER_MOVE = 800  # Number of NN evals per move from AZ paper
 TEMPERATURE = 0.5  # TODO: Change temperature to do the thing from AGZ pg 24 Self-Play
 EXPLORATION = 1.4142135624
@@ -13,7 +13,7 @@ SCAN_TEMPERATURE = 0.5
 SAMPLE_SIZE = int(2048)  # Mini-batch size from AGZ paper
 BATCH_SIZE = 16  # any larger batch size would not work
 MOMENTUM = 0.9
-STEPS_PER_ITER = 1000
+STEPS_PER_ITER = 1
 LEARNING_RATE = 10E-4  # TODO: Replace with smart thing
 
 # Game Manager Variables

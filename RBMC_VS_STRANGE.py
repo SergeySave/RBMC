@@ -1,15 +1,15 @@
-# import sys
-# sys.path.insert(0, "../reconchess-strangefish/")
+import sys
+sys.path.insert(0, "../reconchess-strangefish/")
 
 import chess
 from reconchess import LocalGame, play_local_game
-# from strangefish import StrangeFish
-# from strangefish.strategies import multiprocessing_strategies
+from strangefish import StrangeFish
+from strangefish.strategies import multiprocessing_strategies
 
 from rbmc.RBMCNetworkManager import *
 from rbmc.RBMCPlayer import *
 
-from random_agent_2 import Random
+#from random_agent_2 import Random
 from datetime import datetime
 
 def main():
@@ -22,8 +22,8 @@ def main():
     try:
         winner_color, win_reason, history = play_local_game(
             our_agent,
-            Random(),
-            # StrangeFish(*multiprocessing_strategies.create_strategy()),
+            #Random(),
+            StrangeFish(*multiprocessing_strategies.create_strategy()),
             game=game
         )
 
